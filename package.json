@@ -1,12 +1,18 @@
 {
-  "name": "gofish",
-  "version": "1.0.0",
+  "name": "go-fish-online",
+  "version": "2.0.0",
+  "description": "Go Fish (Берите карту, мистер Свин) для двух игроков: Node.js + Express + Socket.io",
   "main": "server.js",
+  "private": true,
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.7.2"
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
   }
 }

@@ -1,127 +1,555 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Go Fish Online</title>
-    <script src="/socket.io/socket.io.js"></script>
-    <style>
-        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
-        body {
-            margin: 0; padding: 0;
-            background: #1b4d3e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            color: white; height: 100vh; display: flex; flex-direction: column;
-            justify-content: space-between; overflow: hidden;
-        }
-        #opponent, #player { padding: 10px; text-align: center; }
-        .hand { 
-            display: flex; justify-content: center; flex-wrap: wrap; 
-            gap: 8px; min-height: 85px; max-height: 25vh; overflow-y: auto; 
-        }
-        .card {
-            width: 52px; height: 78px; background: #ffffff; color: #111;
-            border-radius: 8px; display: flex; flex-direction: column;
-            justify-content: space-between; align-items: center; padding: 4px;
-            font-size: 16px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            cursor: pointer; transition: transform 0.1s ease, box-shadow 0.1s;
-        }
-        .card.red { color: #d32f2f; }
-        .card:active { transform: scale(0.92); }
-        .card-back { 
-            background: linear-gradient(135deg, #b71c1c 25%, #880e4e 100%); 
-            border: 2px solid white; color: rgba(255,255,255,0.4); 
-            font-size: 24px; justify-content: center;
-        }
-        #center {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        #deck {
-            width: 65px; height: 95px; background: #263238; border: 2px dashed #90a4ae;
-            border-radius: 8px; display: flex; flex-direction: column; justify-content: center; 
-            align-items: center; font-size: 14px; box-shadow: 0 6px 12px rgba(0,0,0,0.4);
-        }
-        #deck span { font-size: 18px; font-weight: bold; color: #ffca28; }
-        #status {
-            background: rgba(0,0,0,0.6); padding: 10px 18px; border-radius: 25px;
-            margin-top: 15px; font-size: 14px; max-width: 85%; text-align: center;
-            backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1);
-        }
-        .turn-banner { font-weight: bold; margin-bottom: 8px; font-size: 15px; }
-        .active-turn { color: #00e676; text-shadow: 0 0 10px rgba(0,230,118,0.5); }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#072c22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Go Fish — Берите карту!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --felt1:#12664b; --felt2:#0b4a37; --felt3:#06261d;
+  --gold:#f2c14e; --gold-d:#c8962a; --ivory:#fbf7ee; --ink:#14201b;
+  --red:#c62d2d; --blk:#1a1d24; --glass:rgba(255,255,255,.08); --line:rgba(255,255,255,.16);
+  --serif:'Playfair Display',Georgia,'Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;touch-action:manipulation;
+  -webkit-user-select:none;user-select:none;background:var(--felt3);color:#fff;font-family:var(--sans)}
+body{position:fixed;inset:0}
+button,input{font-family:inherit;touch-action:manipulation}
+button{cursor:pointer}
+
+/* ---------- Стол ---------- */
+#app{position:absolute;inset:0;display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0);
+  background:
+    radial-gradient(ellipse at 50% 38%,rgba(255,255,255,.10),transparent 60%),
+    repeating-radial-gradient(circle at 30% 20%,rgba(255,255,255,.018) 0 2px,transparent 2px 5px),
+    radial-gradient(ellipse at 50% 40%,var(--felt1) 0%,var(--felt2) 55%,var(--felt3) 100%);
+  box-shadow:inset 0 0 90px rgba(0,0,0,.65)}
+.top{display:flex;align-items:center;gap:8px;padding:8px 12px 4px;min-height:44px}
+.brand{font-family:var(--serif);font-weight:800;font-size:18px;letter-spacing:.2px;color:var(--gold);flex:1}
+.roomtag{background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.iconbtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--glass);color:#fff;font-size:15px;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.iconbtn:active{transform:scale(.92)}
+
+.zone{margin:4px 8px;padding:8px 10px;border-radius:18px;background:var(--glass);border:1px solid var(--line);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.28);
+  transition:box-shadow .35s,border-color .35s,background .35s}
+.zone.active{border-color:var(--gold);background:rgba(242,193,78,.10);animation:glow 1.8s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 0 1px var(--gold),0 0 14px rgba(242,193,78,.30)}50%{box-shadow:0 0 0 2px var(--gold),0 0 30px rgba(242,193,78,.60)}}
+.zhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.who{font-weight:700;font-size:14px;display:flex;align-items:center;gap:7px}
+.dot{width:9px;height:9px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80;transition:background .3s}
+.dot.off{background:#f87171;box-shadow:0 0 8px #f87171;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.35}}
+.turnflag{font-size:11px;font-weight:700;color:#1b1400;background:var(--gold);border-radius:999px;padding:2px 9px;opacity:0;transform:scale(.8);transition:.3s}
+.zone.active .turnflag{opacity:1;transform:none}
+.bookbox{display:flex;align-items:center;gap:6px;min-width:0}
+.bk-n{font-family:var(--serif);font-weight:800;font-size:22px;color:var(--gold);line-height:1;display:inline-block}
+.bk-n.bump{animation:bump .5s}
+@keyframes bump{40%{transform:scale(1.7)}}
+.bk-l{font-size:11px;opacity:.75}
+.chips{display:flex;gap:3px;flex-wrap:wrap;max-width:44vw}
+.chip{font-family:var(--serif);font-weight:800;font-size:11px;color:var(--ink);background:var(--ivory);border-radius:5px;padding:1px 4px;
+  box-shadow:0 1px 3px rgba(0,0,0,.4);animation:pop .5s}
+@keyframes pop{0%{transform:scale(0) rotate(-20deg)}70%{transform:scale(1.25)}100%{transform:none}}
+
+.opphand{display:flex;justify-content:center;height:52px;align-items:center;position:relative}
+.opphand .card{--cw:36px}
+.cntbadge{position:absolute;right:0;bottom:-2px;background:rgba(0,0,0,.5);border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700}
+
+/* ---------- Центр ---------- */
+.center{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;padding:4px 14px}
+.status{align-self:center;text-align:center;font-size:13px;font-weight:700;padding:6px 14px;border-radius:999px;background:rgba(0,0,0,.35);
+  border:1px solid var(--line);transition:.3s;max-width:100%}
+.status.you{background:var(--gold);color:#1b1400;border-color:var(--gold-d)}
+.status.warn{background:#7f1d1d;border-color:#f87171;animation:blink 1.4s infinite}
+.mid{flex:1;min-height:0;display:flex;gap:12px;align-items:stretch}
+.deck{width:74px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.stack{position:relative;width:52px;height:73px}
+.stack .card{--cw:52px;position:absolute;left:0;top:0}
+.stack .card:nth-child(1){transform:translate(-3px,3px)}
+.stack .card:nth-child(2){transform:translate(-1.5px,1.5px)}
+.stack.empty{border:2px dashed var(--line);border-radius:7px}
+.stack.empty .card{display:none}
+.deckcnt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:4;font-family:var(--serif);font-weight:800;font-size:22px;
+  color:#fff;text-shadow:0 2px 6px #000,0 0 3px #000}
+.deck .lbl{font-size:11px;opacity:.75}
+.log{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;overflow:hidden;padding:6px 8px;border-radius:12px;background:rgba(0,0,0,.22);
+  border:1px solid rgba(255,255,255,.08)}
+.ln{font-size:12.5px;line-height:1.25;padding:3px 8px;border-radius:8px;opacity:.55;border-left:3px solid transparent}
+.ln:nth-child(1){opacity:1;font-weight:600;background:rgba(255,255,255,.08)}
+.ln:nth-child(2){opacity:.8}
+.ln.you{border-left-color:var(--gold)}
+.ln.opp{border-left-color:#7dd3fc}
+.ln.new{animation:slideIn .4s}
+@keyframes slideIn{from{opacity:0;transform:translateY(-10px)}}
+
+/* ---------- Карты ---------- */
+.card{--cw:60px;width:var(--cw);height:calc(var(--cw)*1.4);border-radius:calc(var(--cw)*.13);position:relative;flex:none;
+  transition:transform .28s cubic-bezier(.2,.9,.3,1.3),box-shadow .28s;box-shadow:0 3px 8px rgba(0,0,0,.45)}
+.card.face{background:linear-gradient(160deg,#fff,var(--ivory) 70%,#efe6d2);color:var(--blk);border:1px solid #cfc5ae;font-family:var(--serif);cursor:pointer}
+.card.face.red{color:var(--red)}
+.cn{position:absolute;display:flex;flex-direction:column;align-items:center;line-height:1}
+.cn b{font-size:calc(var(--cw)*.31);font-weight:800;letter-spacing:-.5px}
+.cn i{font-style:normal;font-size:calc(var(--cw)*.24);margin-top:calc(var(--cw)*.01)}
+.cn.tl{top:calc(var(--cw)*.07);left:calc(var(--cw)*.09)}
+.cn.br{bottom:calc(var(--cw)*.07);right:calc(var(--cw)*.09);transform:rotate(180deg)}
+.mid-s{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:calc(var(--cw)*.62);opacity:.9;padding-left:calc(var(--cw)*.12);padding-top:calc(var(--cw)*.18)}
+.card.back{border:2px solid var(--ivory);
+  background:
+    repeating-linear-gradient(45deg,rgba(242,193,78,.45) 0 2px,transparent 2px 7px),
+    repeating-linear-gradient(-45deg,rgba(242,193,78,.45) 0 2px,transparent 2px 7px),
+    linear-gradient(135deg,#1e3a8a,#3b5fd0 55%,#1e3a8a)}
+.card.back::after{content:"";position:absolute;inset:calc(var(--cw)*.07);border:1.5px solid rgba(251,247,238,.8);border-radius:calc(var(--cw)*.07)}
+.card.new{animation:dealIn .5s cubic-bezier(.2,.9,.3,1.2) backwards}
+@keyframes dealIn{from{opacity:0;transform:translate(-30vw,-45vh) rotate(-25deg) scale(.6)}60%{opacity:1}}
+
+.hand{display:flex;flex-wrap:nowrap;justify-content:center;align-items:center;height:clamp(130px,31vh,270px);height:clamp(130px,31dvh,270px);padding-top:26px}
+.hand .card.face:active{transform:translateY(-8px)}
+.hand .card.face.picked{transform:translateY(-26px) scale(1.07);z-index:6;box-shadow:0 0 0 3px var(--gold),0 0 22px rgba(242,193,78,.9),0 14px 22px rgba(0,0,0,.5)}
+.hand.locked .card.face{filter:brightness(.82) saturate(.85)}
+.hand.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+
+/* ---------- Эффекты ---------- */
+#fx{position:fixed;inset:0;pointer-events:none;z-index:50}
+.toast,.banner{position:absolute;left:50%;opacity:0;white-space:nowrap}
+.toast{top:calc(env(safe-area-inset-top,0px) + 58px);transform:translateX(-50%);font-weight:800;font-size:17px;padding:9px 18px;border-radius:999px;
+  background:rgba(8,20,16,.88);border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+.toast.good{background:linear-gradient(135deg,#f2c14e,#e09a1b);color:#1b1400;border-color:#fff3c4;font-size:21px}
+.toast.bad{background:linear-gradient(135deg,#7f1d1d,#b91c1c);border-color:#fca5a5}
+.toast.show{animation:toastA 1.6s both}
+@keyframes toastA{0%{opacity:0;transform:translate(-50%,-20px) scale(.8)}12%{opacity:1;transform:translate(-50%,0) scale(1.08)}22%{transform:translate(-50%,0) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-14px)}}
+.banner{top:40%;font-family:var(--serif);font-weight:800;font-size:clamp(28px,9vw,46px);letter-spacing:1px;padding:14px 28px;color:#fff;
+  background:linear-gradient(135deg,#1e40af,#0ea5e9);border:3px solid var(--ivory);border-radius:16px;text-shadow:0 3px 0 rgba(0,0,0,.35);
+  box-shadow:0 18px 50px rgba(0,0,0,.6)}
+.banner.show{animation:bannerA 1.5s both}
+@keyframes bannerA{0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(-8deg)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(3deg)}28%{transform:translate(-50%,-50%) scale(1) rotate(-2deg)}80%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(-2deg)}100%{opacity:0;transform:translate(-50%,-70%) scale(.9) rotate(-2deg)}}
+#net{position:fixed;left:0;right:0;top:0;z-index:60;text-align:center;background:#b45309;color:#fff;font-size:13px;font-weight:700;
+  padding:calc(env(safe-area-inset-top,0px) + 6px) 10px 6px;transform:translateY(-110%);transition:transform .3s}
+#net.on{transform:none}
+
+/* ---------- Оверлеи ---------- */
+.ov{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;padding:20px;
+  background:rgba(4,20,15,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.ov.on{display:flex;animation:fadeIn .35s}
+@keyframes fadeIn{from{opacity:0}}
+.panel{width:100%;max-width:380px;text-align:center;padding:26px 22px;border-radius:24px;background:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,.05));
+  border:1px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.55)}
+.panel h1{font-family:var(--serif);font-weight:800;font-size:34px;margin:0 0 4px;color:var(--gold);line-height:1.1}
+.panel h2{font-family:var(--serif);font-weight:800;font-size:30px;margin:0 0 8px;color:var(--gold)}
+.panel p{margin:6px 0 16px;opacity:.85;font-size:14px;line-height:1.4}
+.suits{font-size:26px;letter-spacing:8px;margin-bottom:10px;color:var(--ivory)}
+.suits .r{color:#ff7b7b}
+.btn{display:block;width:100%;padding:14px;border:0;border-radius:14px;font-size:17px;font-weight:800;margin-top:10px;
+  background:linear-gradient(180deg,#ffd466,#e0a21f);color:#2a1d00;box-shadow:0 4px 0 #9a6b08,0 10px 20px rgba(0,0,0,.35);transition:transform .1s,box-shadow .1s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #9a6b08}
+.btn.sec{background:rgba(255,255,255,.12);color:#fff;box-shadow:none;border:1px solid var(--line);font-size:15px;padding:12px}
+.btn:disabled{opacity:.6}
+.row{display:flex;gap:8px;margin-top:10px}
+.row input{flex:1;min-width:0;font-size:22px;font-weight:800;text-align:center;letter-spacing:8px;padding:12px 6px;border-radius:14px;border:1px solid var(--line);
+  background:rgba(0,0,0,.35);color:#fff;outline:none;-webkit-user-select:text;user-select:text}
+.row input:focus{border-color:var(--gold)}
+.row .btn{width:auto;margin:0;padding:12px 20px}
+.or{opacity:.6;font-size:12px;margin-top:14px}
+.err{min-height:18px;color:#fca5a5;font-size:13px;font-weight:600;margin-top:10px}
+.bigcode{font-family:var(--serif);font-weight:800;font-size:58px;letter-spacing:10px;color:var(--gold);margin:6px 0 2px;padding-left:10px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--gold);border-radius:50%;animation:rot 1s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes rot{to{transform:rotate(360deg)}}
+.score{display:flex;justify-content:center;align-items:center;gap:18px;margin:10px 0 16px;font-family:var(--serif)}
+.score div{display:flex;flex-direction:column;align-items:center;font-size:12px;font-family:var(--sans);opacity:.9}
+.score b{font-family:var(--serif);font-size:46px;color:var(--gold);line-height:1}
+.score span.vs{font-size:28px;opacity:.5}
+
+@media (max-height:520px){
+  .top{padding:2px 10px;min-height:34px}.zone{padding:5px 8px;margin:2px 8px}.opphand{height:44px}.hand{padding-top:18px}.status{padding:3px 12px}
+  .opphand .card{--cw:30px}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;transition-duration:.01s!important}}
+</style>
 </head>
 <body>
+<div id="net">Нет соединения — переподключаемся…</div>
 
-    <div id="opponent">
-        <div class="turn-banner">Соперник (Квартетов: <span id="opp-books">0</span>)</div>
-        <div class="hand" id="opp-hand"></div>
+<div id="app">
+  <header class="top">
+    <div class="brand">🎣 Go Fish</div>
+    <div class="roomtag" id="roomTag">Комната</div>
+    <button class="iconbtn" id="btnShare" title="Пригласить">🔗</button>
+    <button class="iconbtn" id="btnLeave" title="Выйти">✕</button>
+  </header>
+
+  <section class="zone opp" id="zoneOpp">
+    <div class="zhead">
+      <div class="who"><span class="dot" id="oppDot"></span>Соперник<span class="turnflag">ходит</span></div>
+      <div class="bookbox"><div class="chips" id="oppChips"></div><span class="bk-n" id="oppBookN">0</span><span class="bk-l">из 4</span></div>
     </div>
+    <div class="opphand" id="oppHand"></div>
+  </section>
 
-    <div id="center">
-        <div id="deck">Колода<br><span id="deck-count">0</span></div>
-        <div id="status">Ожидание подключения второго игрока...</div>
+  <section class="center">
+    <div class="status" id="status">Загрузка…</div>
+    <div class="mid">
+      <div class="deck">
+        <div class="stack" id="stack"><div class="card back"></div><div class="card back"></div><div class="card back"></div><div class="deckcnt" id="deckCnt">52</div></div>
+        <div class="lbl">Колода</div>
+      </div>
+      <div class="log" id="log"></div>
     </div>
+  </section>
 
-    <div id="player">
-        <div class="turn-banner" id="turn-txt">Ваши карты (Квартетов: <span id="my-books">0</span>)</div>
-        <div class="hand" id="my-hand"></div>
+  <section class="zone me" id="zoneMe">
+    <div class="zhead">
+      <div class="who">Вы<span class="turnflag">ваш ход</span></div>
+      <div class="bookbox"><div class="chips" id="meChips"></div><span class="bk-n" id="meBookN">0</span><span class="bk-l">из 4</span></div>
     </div>
+    <div class="hand" id="hand"></div>
+  </section>
+</div>
 
-    <script>
-        const socket = io();
-        let canMove = false;
+<div id="fx"><div class="toast" id="toast"></div><div class="banner" id="banner"></div></div>
 
-        socket.on('chat', (msg) => {
-            document.getElementById('status').innerText = msg;
-        });
+<!-- Лобби -->
+<div class="ov on" id="ovLobby">
+  <div class="panel">
+    <div class="suits">♠<span class="r">♥</span>♣<span class="r">♦</span></div>
+    <h1>Берите карту!</h1>
+    <p>Go Fish для двоих. Побеждает тот, кто первым соберёт 4 квартета.</p>
+    <button class="btn" id="btnCreate">Создать комнату</button>
+    <div class="or">или войдите по коду</div>
+    <div class="row">
+      <input id="codeIn" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0000" autocomplete="off">
+      <button class="btn" id="btnJoin">Войти</button>
+    </div>
+    <div class="err" id="lobbyErr"></div>
+  </div>
+</div>
 
-        socket.on('goFish', (msg) => {
-            document.getElementById('status').innerText = msg;
-        });
+<!-- Ожидание соперника -->
+<div class="ov" id="ovWait">
+  <div class="panel">
+    <h2>Комната создана</h2>
+    <div class="bigcode" id="waitCode">0000</div>
+    <p><span class="spin"></span>Ждём соперника. Отправьте ему код или ссылку.</p>
+    <button class="btn" id="btnShare2">Поделиться ссылкой</button>
+    <button class="btn sec" id="btnCancel">Отмена</button>
+  </div>
+</div>
 
-        socket.on('state', (state) => {
-            canMove = state.isYourTurn;
-            document.getElementById('deck-count').innerText = state.deckCount;
-            document.getElementById('my-books').innerText = state.yourBooks.length;
-            document.getElementById('opp-books').innerText = state.oppBooks.length;
+<!-- Конец игры -->
+<div class="ov" id="ovOver">
+  <div class="panel">
+    <h2 id="overTitle">Победа!</h2>
+    <div class="score">
+      <div><b id="scMe">0</b>Вы</div><span class="vs">:</span><div><b id="scOpp">0</b>Соперник</div>
+    </div>
+    <p id="overNote"></p>
+    <button class="btn" id="btnRematch">Реванш</button>
+    <button class="btn sec" id="btnMenu">В меню</button>
+  </div>
+</div>
 
-            const turnTxt = document.getElementById('turn-txt');
-            if (canMove) {
-                turnTxt.innerHTML = "👉 ВАШ ХОД: Нажмите на карту";
-                turnTxt.className = "turn-banner active-turn";
-            } else {
-                turnTxt.innerHTML = "Ожидание хода соперника...";
-                turnTxt.className = "turn-banner";
-            }
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(function(){
+'use strict';
 
-            // Рубашки карт соперника
-            const oppHand = document.getElementById('opp-hand');
-            oppHand.innerHTML = '';
-            for (let i = 0; i < state.oppCardCount; i++) {
-                let c = document.createElement('div');
-                c.className = 'card card-back';
-                c.innerText = '🂠';
-                oppHand.appendChild(c);
-            }
+/* ---------- Данные ---------- */
+const RANKS=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+// [именительный, винительный, для 2–4, родительный мн.]
+const RW={A:['Туз','Туз','Туза','Тузов'],K:['Король','Короля','Короля','Королей'],Q:['Дама','Даму','Дамы','Дам'],J:['Валет','Валета','Валета','Валетов'],
+'10':['Десятка','Десятку','Десятки','Десяток'],'9':['Девятка','Девятку','Девятки','Девяток'],'8':['Восьмёрка','Восьмёрку','Восьмёрки','Восьмёрок'],
+'7':['Семёрка','Семёрку','Семёрки','Семёрок'],'6':['Шестёрка','Шестёрку','Шестёрки','Шестёрок'],'5':['Пятёрка','Пятёрку','Пятёрки','Пятёрок'],
+'4':['Четвёрка','Четвёрку','Четвёрки','Четвёрок'],'3':['Тройка','Тройку','Тройки','Троек'],'2':['Двойка','Двойку','Двойки','Двоек']};
+const SYM={S:'♠\uFE0E',H:'♥\uFE0E',D:'♦\uFE0E',C:'♣\uFE0E'};
+const cardsText=(r,n)=>n===1?RW[r][1]:n+' '+RW[r][2];
+const $=id=>document.getElementById(id);
+const vib=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
 
-            // Карты игрока
-            const myHand = document.getElementById('my-hand');
-            myHand.innerHTML = '';
-            state.yourHand.forEach(card => {
-                let c = document.createElement('div');
-                let isRed = card.suit === '♥' || card.suit === '♦';
-                c.className = `card ${isRed ? 'red' : ''}`;
-                c.innerHTML = `<div>${card.rank}</div><div>${card.suit}</div><div>${card.rank}</div>`;
-                
-                // Ход в одно нажатие прямо по карте:
-                c.onclick = () => {
-                    if (canMove) {
-                        socket.emit('askCard', card.rank);
-                    }
-                };
-                myHand.appendChild(c);
-            });
-        });
-    </script>
+/* ---------- Идентификация и сессия ---------- */
+function store(k,v){try{if(v===undefined)return sessionStorage.getItem(k);if(v===null)sessionStorage.removeItem(k);else sessionStorage.setItem(k,v)}catch(e){}return null}
+let cid=store('gf_cid');
+if(!cid){
+  cid=(window.crypto&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)).replace(/[^A-Za-z0-9_-]/g,'');
+  store('gf_cid',cid);
+}
+const urlRoom=()=>{const q=new URLSearchParams(location.search).get('room');return q&&/^\d{4}$/.test(q)?q:null};
+const setUrl=code=>{try{history.replaceState(null,'',location.pathname+(code?'?room='+code:''))}catch(e){}};
+
+/* ---------- Сокет ---------- */
+const socket=io({reconnectionDelay:500,reconnectionDelayMax:3000});
+let S=null,seen=0,joining=false,wantCode=urlRoom()||store('gf_room');
+
+socket.on('connect',()=>{$('net').classList.remove('on');if(wantCode)doJoin(wantCode,true)});
+socket.on('disconnect',()=>$('net').classList.add('on'));
+socket.on('connect_error',()=>$('net').classList.add('on'));
+socket.on('kicked',()=>{resetToLobby('Игра открыта в другой вкладке')});
+
+function doJoin(code,silent){
+  if(joining)return;joining=true;
+  socket.emit('join',{code,clientId:cid},res=>{
+    joining=false;
+    if(res&&res.ok){wantCode=res.code;store('gf_room',res.code);setUrl(res.code)}
+    else{
+      const fromLink=!!urlRoom(),msg=(res&&res.error)||'Не удалось войти';
+      wantCode=null;store('gf_room',null);setUrl(null);S=null;
+      showLobby(silent&&!fromLink?'':msg);
+    }
+  });
+}
+function lobbyErr(t){$('lobbyErr').textContent=t||''}
+function showLobby(err){
+  ['ovWait','ovOver'].forEach(i=>$(i).classList.remove('on'));
+  $('ovLobby').classList.add('on');lobbyErr(err);
+}
+function resetToLobby(msg){
+  wantCode=null;store('gf_room',null);setUrl(null);S=null;seen=0;overShown=false;clearTimeout(overT);
+  showLobby(msg||'');
+}
+
+/* ---------- Лобби ---------- */
+$('btnCreate').onclick=()=>{
+  lobbyErr('');
+  socket.emit('create',{clientId:cid},res=>{
+    if(res&&res.ok){wantCode=res.code;store('gf_room',res.code);setUrl(res.code)}
+    else lobbyErr((res&&res.error)||'Не удалось создать комнату');
+  });
+};
+$('btnJoin').onclick=()=>{
+  const c=$('codeIn').value.trim();
+  if(!/^\d{4}$/.test(c)){lobbyErr('Введите 4 цифры кода');return}
+  lobbyErr('');doJoin(c,false);
+};
+$('codeIn').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4);if(e.target.value.length===4)lobbyErr('')});
+$('codeIn').addEventListener('keydown',e=>{if(e.key==='Enter')$('btnJoin').click()});
+$('btnCancel').onclick=()=>{socket.emit('leave');resetToLobby('')};
+$('btnMenu').onclick=()=>{socket.emit('leave');resetToLobby('')};
+$('btnLeave').onclick=()=>{
+  if(!S)return;
+  if(S.phase==='playing'&&!confirm('Выйти из игры? Соперник будет ждать вашего возвращения.'))return;
+  socket.emit('leave');resetToLobby('');
+};
+$('btnRematch').onclick=()=>{socket.emit('rematch');$('btnRematch').disabled=true};
+
+/* ---------- Приглашение ---------- */
+function link(){return location.origin+location.pathname+'?room='+(S?S.code:'')}
+function copyText(t){
+  if(navigator.clipboard&&navigator.clipboard.writeText)return navigator.clipboard.writeText(t);
+  return new Promise((ok,no)=>{try{const a=document.createElement('textarea');a.value=t;a.style.cssText='position:fixed;opacity:0';document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();ok()}catch(e){no(e)}});
+}
+function share(){
+  if(!S)return;
+  const url=link();
+  if(navigator.share){navigator.share({title:'Go Fish',text:'Сыграем в «Берите карту»? Комната '+S.code,url}).catch(()=>{})}
+  else copyText(url).then(()=>fx('toast','Ссылка скопирована','')).catch(()=>fx('toast','Код комнаты: '+S.code,''));
+}
+$('btnShare').onclick=share;$('btnShare2').onclick=share;
+$('roomTag').onclick=()=>{if(S)copyText(link()).then(()=>fx('toast','Ссылка скопирована','')).catch(()=>{})};
+
+/* ---------- Очередь эффектов ---------- */
+const fxQ=[];let fxBusy=false;
+function fx(kind,text,cls){fxQ.push({kind,text,cls});if(!fxBusy)runFx()}
+function runFx(){
+  const it=fxQ.shift();
+  if(!it){fxBusy=false;return}
+  fxBusy=true;
+  const el=$(it.kind);
+  el.textContent=it.text;el.className=it.kind+' '+(it.cls||'');
+  void el.offsetWidth;el.classList.add('show');
+  setTimeout(()=>{el.classList.remove('show');setTimeout(runFx,100)},it.kind==='banner'?1500:1600);
+}
+
+function playEvent(e){
+  const you=e.by==='you';
+  if(e.kind==='take'){
+    if(you){fx('toast','+'+(e.count===1?'1 '+RW[e.rank][0]:e.count+' '+RW[e.rank][2])+'!','good');vib(25)}
+    else fx('toast','Соперник забрал: '+cardsText(e.rank,e.count),'bad');
+  }else if(e.kind==='fish'){
+    fx('banner',you?'БЕРИТЕ КАРТУ!':'СОПЕРНИК БЕРЁТ КАРТУ','');if(you)vib([30,40,30]);
+  }else if(e.kind==='draw'&&e.lucky){
+    fx('toast',you?'Повезло! Ходите ещё':'Сопернику повезло — он ходит снова',you?'good':'bad');
+  }else if(e.kind==='book'){
+    fx('toast','📚 Квартет: '+RW[e.rank][3]+'!',you?'good':'bad');vib(60);
+  }
+}
+
+function logText(e){
+  const you=e.by==='you';
+  switch(e.kind){
+    case'start':return you?'Игра началась. Вы ходите первым':'Игра началась. Первым ходит соперник';
+    case'take':return you?'Вы забрали у соперника: '+cardsText(e.rank,e.count):'Соперник забрал у вас: '+cardsText(e.rank,e.count);
+    case'fish':return you?'У соперника нет '+RW[e.rank][3]+'. Берите карту!':'Соперник просил '+RW[e.rank][3]+' — у вас нет';
+    case'draw':return you?'Вы вытянули карту из колоды'+(e.drawn?' ('+RW[e.drawn][0]+')':'')+(e.lucky?' — повезло!':''):'Соперник вытянул карту из колоды'+(e.lucky?' — и ему повезло!':'');
+    case'empty':return 'Колода пуста — ход переходит '+(you?'к сопернику':'к вам');
+    case'refill':return you?'Рука пуста — вы взяли карту из колоды':'У соперника пустая рука — он взял карту';
+    case'book':return (you?'Вы собрали':'Соперник собрал')+' квартет: '+RW[e.rank][3];
+    case'left':return you?'Вы отключились':'Соперник отключился';
+    case'back':return you?'Вы вернулись в игру':'Соперник вернулся';
+    case'over':return 'Игра окончена';
+  }
+  return '';
+}
+
+/* ---------- Состояние ---------- */
+let pending=null,pendT=null,lastPick=0,busy=false;
+let known=new Set(),prevOpp=0,prevMeBooks=0,prevOppBooks=0,overShown=false,overT=null,prevTurn=null;
+
+socket.on('state',s=>{
+  pending=s;
+  if(pendT)return;
+  const wait=lastPick?Math.max(0,360-(Date.now()-lastPick)):0; // даём доиграть анимацию тапа по карте
+  pendT=setTimeout(()=>{pendT=null;lastPick=0;busy=false;const st=pending;pending=null;apply(st)},wait);
+});
+
+function apply(s){
+  const fresh0=!S||S.code!==s.code;
+  const prev=S;S=s;
+  if(fresh0){seen=s.logSeq;known=new Set();prevOpp=s.opp.count;prevMeBooks=s.you.books.length;prevOppBooks=s.opp.books.length;overShown=false;prevTurn=null}
+  const fresh=s.log.filter(e=>e.id>seen);seen=s.logSeq;
+  if(fresh.some(e=>e.kind==='start')){known=new Set();overShown=false;prevOpp=0;$('btnRematch').disabled=false}
+  if(!fresh0)fresh.slice(-4).forEach(playEvent);
+  render(s,fresh,fresh0);
+  if(s.turn==='you'&&prevTurn&&prevTurn!=='you')vib(40);
+  prevTurn=s.turn;
+}
+
+function render(s,fresh,isNew){
+  $('roomTag').textContent='Комната '+s.code;
+  $('ovLobby').classList.remove('on');
+  $('ovWait').classList.toggle('on',s.phase==='waiting');
+  $('waitCode').textContent=s.code;
+
+  // статус
+  const st=$('status');let t='',c='status';
+  if(s.phase==='waiting'){t='Ждём соперника…'}
+  else if(s.phase==='over'){t='Игра окончена'}
+  else if(!s.opp.connected){t='Соперник отключился. Ждём его возвращения…';c+=' warn'}
+  else if(s.turn==='you'){t='Ваш ход — коснитесь карты, которую хотите спросить';c+=' you'}
+  else t='Ход соперника…';
+  st.textContent=t;st.className=c;
+
+  $('zoneMe').classList.toggle('active',s.phase==='playing'&&s.turn==='you');
+  $('zoneOpp').classList.toggle('active',s.phase==='playing'&&s.turn==='opp');
+  $('oppDot').classList.toggle('off',s.phase!=='waiting'&&!s.opp.connected);
+
+  renderBooks('me',s.you.books,prevMeBooks);renderBooks('opp',s.opp.books,prevOppBooks);
+  prevMeBooks=s.you.books.length;prevOppBooks=s.opp.books.length;
+
+  $('deckCnt').textContent=s.deck;
+  $('stack').classList.toggle('empty',s.deck===0);
+  renderOpp(s.opp.count);
+  renderHand(s.you.hand,s.phase==='playing'&&s.turn==='you'&&s.opp.connected);
+  renderLog(s.log,fresh);
+
+  // финал
+  if(s.phase==='over'){
+    if(!overShown){
+      overShown=true;
+      const show=()=>{
+        if(!S||S.phase!=='over')return;
+        $('overTitle').textContent=S.winner==='you'?'🏆 Победа!':S.winner==='opp'?'Соперник победил':'Ничья';
+        $('scMe').textContent=S.you.books.length;$('scOpp').textContent=S.opp.books.length;
+        $('ovOver').classList.add('on');updateOver();
+      };
+      if(isNew)show();else overT=setTimeout(show,1700);
+    }else updateOver();
+  }else{$('ovOver').classList.remove('on');clearTimeout(overT)}
+}
+
+function updateOver(){
+  const s=S,note=$('overNote'),b=$('btnRematch');
+  if(s.rematch.you){note.textContent=s.opp.connected?'Ждём согласия соперника…':'Соперник отключился — реванш начнётся, когда он вернётся';b.disabled=true}
+  else if(s.rematch.opp){note.textContent='Соперник хочет реванш!';b.disabled=false}
+  else{note.textContent=s.opp.connected?'':'Соперник отключился';b.disabled=false}
+}
+
+function renderBooks(who,list,prevN){
+  $(who+'Chips').innerHTML=list.map(r=>'<span class="chip">'+r+'</span>').join('');
+  const n=$(who+'BookN');n.textContent=list.length;
+  if(list.length>prevN){n.classList.remove('bump');void n.offsetWidth;n.classList.add('bump')}
+}
+
+function renderOpp(n){
+  const box=$('oppHand'),W=box.clientWidth||300,cw=parseFloat(getComputedStyle(box.firstElementChild||box).getPropertyValue('--cw'))||36;
+  const show=Math.min(n,18);let step=cw*.5;
+  if(show>1)step=Math.min(step,(W-cw-50)/(show-1));
+  let h='';
+  for(let i=0;i<show;i++)h+='<div class="card back'+(i>=prevOpp&&n>prevOpp?' new':'')+'" style="margin-left:'+(i?step-cw:0)+'px"></div>';
+  h+='<div class="cntbadge">'+n+' '+(n===1?'карта':(n>1&&n<5?'карты':'карт'))+'</div>';
+  box.innerHTML=h;prevOpp=n;
+}
+
+function cardHTML(c,cls,extra){
+  const red=c.s==='H'||c.s==='D',s=SYM[c.s];
+  return '<div class="card face'+(red?' red':'')+(cls?' '+cls:'')+'" data-rank="'+c.r+'" data-id="'+c.id+'"'+(extra||'')+'>'+
+    '<span class="cn tl"><b>'+c.r+'</b><i>'+s+'</i></span><span class="mid-s">'+s+'</span><span class="cn br"><b>'+c.r+'</b><i>'+s+'</i></span></div>';
+}
+
+function renderHand(hand,myTurn){
+  const el=$('hand'),n=hand.length;
+  const W=el.clientWidth-8,H=el.clientHeight-30;
+  // карты лежат одной стопкой: каждая следующая накрывает предыдущую
+  let cw=n?Math.min(80,H/1.4,W/(1+.42*(n-1))):60;
+  cw=Math.max(34,Math.floor(cw));
+  const step=n>1?Math.min(cw*.55,(W-cw)/(n-1)):0;
+  el.style.setProperty('--cw',cw+'px');
+  let k=0;
+  el.innerHTML=hand.map((c,i)=>{
+    const isNew=!known.has(c.id);known.add(c.id);
+    const extra=' style="margin-left:'+(i?step-cw:0)+'px'+(isNew?';animation-delay:'+(k++*110)+'ms':'')+'"';
+    return cardHTML(c,isNew?'new':'',extra);
+  }).join('');
+  el.classList.toggle('locked',!myTurn);
+}
+
+function renderLog(log,fresh){
+  const ids=new Set(fresh.map(e=>e.id));
+  $('log').innerHTML=log.slice(-8).reverse().map(e=>'<div class="ln '+(e.by||'')+(ids.has(e.id)?' new':'')+'">'+logText(e)+'</div>').join('');
+}
+
+/* ---------- Ход: тап по карте ---------- */
+$('hand').addEventListener('click',e=>{
+  const card=e.target.closest('.card');
+  if(!card||!S)return;
+  const hand=$('hand');
+  if(S.phase!=='playing')return;
+  if(!S.opp.connected){fx('toast','Соперник отключился — ждём','bad');return}
+  if(S.turn!=='you'){
+    hand.classList.remove('shake');void hand.offsetWidth;hand.classList.add('shake');
+    fx('toast','Сейчас ход соперника','bad');return;
+  }
+  if(busy)return;
+  busy=true;lastPick=Date.now();
+  const rank=card.dataset.rank;
+  hand.querySelectorAll('.card[data-rank="'+rank+'"]').forEach(c=>c.classList.add('picked'));
+  vib(15);
+  socket.emit('ask',{rank},res=>{
+    if(res&&!res.ok){
+      busy=false;lastPick=0;
+      hand.querySelectorAll('.picked').forEach(c=>c.classList.remove('picked'));
+      fx('toast',res.error||'Ошибка хода','bad');
+    }
+  });
+});
+
+window.addEventListener('resize',()=>{if(S){renderHand(S.you.hand,S.phase==='playing'&&S.turn==='you'&&S.opp.connected);renderOpp(S.opp.count)}});
+document.addEventListener('gesturestart',e=>e.preventDefault());
+document.addEventListener('dblclick',e=>e.preventDefault());
+document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
+
+if(urlRoom())lobbyErr('');
+})();
+</script>
 </body>
 </html>

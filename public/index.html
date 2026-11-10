@@ -104,6 +104,11 @@ button{cursor:pointer}
 .cn b{font-size:calc(var(--cw)*.31);font-weight:800;letter-spacing:-.5px}
 .cn i{font-style:normal;font-size:calc(var(--cw)*.24);margin-top:calc(var(--cw)*.01)}
 .cn.tl{top:calc(var(--cw)*.07);left:calc(var(--cw)*.09)}
+.cn.bl{display:none;bottom:calc(var(--cw)*.05);left:calc(var(--cw)*.09);flex-direction:row;align-items:baseline;gap:calc(var(--cw)*.03)}
+.cn.bl b{font-size:calc(var(--cw)*.24)}
+.cn.bl i{font-size:calc(var(--cw)*.2);margin:0}
+.grp .cn.bl{display:flex}
+.grp .cn.br{display:none}
 .cn.br{bottom:calc(var(--cw)*.07);right:calc(var(--cw)*.09);transform:rotate(180deg)}
 .mid-s{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:calc(var(--cw)*.62);opacity:.9;padding-left:calc(var(--cw)*.12);padding-top:calc(var(--cw)*.18)}
 .card.back{border:2px solid var(--ivory);
@@ -115,11 +120,17 @@ button{cursor:pointer}
 .card.new{animation:dealIn .5s cubic-bezier(.2,.9,.3,1.2) backwards}
 @keyframes dealIn{from{opacity:0;transform:translate(-30vw,-45vh) rotate(-25deg) scale(.6)}60%{opacity:1}}
 
-.hand{display:flex;flex-wrap:nowrap;justify-content:center;align-items:flex-start;height:clamp(130px,31vh,270px);height:clamp(130px,31dvh,270px);padding-top:26px}
-.grp{position:relative;width:var(--cw);flex:none;transition:transform .28s cubic-bezier(.2,.9,.3,1.3)}
+.hand{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:5px;height:clamp(150px,36vh,300px);height:clamp(150px,36dvh,300px);padding-top:24px}
+.grp{position:relative;isolation:isolate;z-index:0;width:var(--cw);flex:none;transition:transform .28s cubic-bezier(.2,.9,.3,1.3)}
 .grp.up{z-index:6;transform:translateY(-24px) scale(1.06)}
 .hand .grp:active{transform:translateY(-8px)}
-.hand .card.face.picked{box-shadow:0 0 0 3px var(--gold),0 0 22px rgba(242,193,78,.9),0 14px 22px rgba(0,0,0,.5)}
+.hand .card.face:active{transform:translateY(-6px)}
+.hand .card.face.picked{transform:translateY(-14px) scale(1.07);z-index:6;box-shadow:0 0 0 3px var(--gold),0 0 22px rgba(242,193,78,.9),0 14px 22px rgba(0,0,0,.5)}
+.card.face.stk2{box-shadow:4px -4px 0 -1px #e7dec8,0 3px 8px rgba(0,0,0,.45)}
+.card.face.stk3,.card.face.stk4{box-shadow:4px -4px 0 -1px #e7dec8,8px -8px 0 -2px #d6ccb2,0 3px 8px rgba(0,0,0,.45)}
+.cnt{position:absolute;top:calc(var(--cw)*-.13);right:calc(var(--cw)*-.13);z-index:3;min-width:calc(var(--cw)*.42);height:calc(var(--cw)*.42);padding:0 4px;border-radius:999px;
+  display:flex;align-items:center;justify-content:center;background:var(--gold);color:#1b1400;font-family:var(--sans);font-weight:800;font-size:calc(var(--cw)*.24);
+  border:2px solid #fff3c4;box-shadow:0 2px 6px rgba(0,0,0,.5)}
 .hand.locked .card.face{filter:brightness(.82) saturate(.85)}
 .hand.shake{animation:shake .35s}
 @keyframes shake{20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
@@ -495,29 +506,31 @@ function renderOpp(n){
 function cardHTML(c,cls,extra){
   const red=c.s==='H'||c.s==='D',s=SYM[c.s];
   return '<div class="card face'+(red?' red':'')+(cls?' '+cls:'')+'" data-rank="'+c.r+'" data-id="'+c.id+'"'+(extra||'')+'>'+
-    '<span class="cn tl"><b>'+c.r+'</b><i>'+s+'</i></span><span class="mid-s">'+s+'</span><span class="cn br"><b>'+c.r+'</b><i>'+s+'</i></span></div>';
+    '<span class="cn tl"><b>'+c.r+'</b><i>'+s+'</i></span><span class="mid-s">'+s+'</span><span class="cn br"><b>'+c.r+'</b><i>'+s+'</i></span><span class="cn bl"><b>'+c.r+'</b><i>'+s+'</i></span></div>';
 }
 
 function renderHand(hand,myTurn){
-  const el=$('hand'),g={};
+  const el=$('hand'),gap=12,g={};
   hand.forEach(c=>(g[c.r]=g[c.r]||[]).push(c));
   const order=RANKS.filter(r=>g[r]),n=order.length;
-  const maxK=order.reduce((m,r)=>Math.max(m,g[r].length),1);
-  const W=el.clientWidth-8,H=el.clientHeight-30,DY=.3;
-  // одинаковые ранги лежат друг на друге, разные — рядом внахлёст
-  let cw=n?Math.min(80,H/(1.4+DY*(maxK-1)),W/(1+.45*(n-1))):60;
-  cw=Math.max(34,Math.floor(cw));
-  const step=n>1?Math.min(cw*1.05,(W-cw)/(n-1)):0;
+  const W=el.clientWidth-14,H=el.clientHeight-30;
+  // одна карта на ранг (остальные лежат под ней) — подбираем крупный размер без наложения
+  let cw=30;
+  for(let c=76;c>=30;c-=2){
+    const perRow=Math.max(1,Math.floor((W+gap)/(c+gap)));
+    const rows=Math.ceil(n/perRow);
+    if(rows*c*1.4+(rows-1)*gap<=H){cw=c;break}
+  }
   el.style.setProperty('--cw',cw+'px');
   let k=0;
-  el.innerHTML=order.map((r,gi)=>{
+  el.innerHTML=order.map(r=>{
     const list=g[r],len=list.length;
-    return '<div class="grp" data-rank="'+r+'" style="margin-left:'+(gi?step-cw:0)+'px;height:calc(var(--cw)*'+(1.4+DY*(len-1)).toFixed(2)+')">'+
-      list.map((c,i)=>{
-        const isNew=!known.has(c.id);known.add(c.id);
-        const extra=' style="position:absolute;left:0;top:calc(var(--cw)*'+(DY*i).toFixed(2)+');z-index:'+(len-i)+(isNew?';animation-delay:'+(k++*110)+'ms':'')+'"';
-        return cardHTML(c,isNew?'new':'',extra);
-      }).join('')+'</div>';
+    const isNew=list.some(c=>!known.has(c.id));
+    list.forEach(c=>known.add(c.id));
+    const extra=isNew?' style="animation-delay:'+(k++*90)+'ms"':'';
+    let h=cardHTML(list[0],(len>1?'stk'+Math.min(len,4):'')+(isNew?' new':''),extra);
+    if(len>1)h=h.replace(/<\/div>$/,'<span class="cnt">×'+len+'</span></div>');
+    return h;
   }).join('');
   el.classList.toggle('locked',!myTurn);
 }
@@ -541,7 +554,6 @@ $('hand').addEventListener('click',e=>{
   if(busy)return;
   busy=true;lastPick=Date.now();
   const rank=card.dataset.rank;
-  card.parentElement.classList.add('up');
   hand.querySelectorAll('.card[data-rank="'+rank+'"]').forEach(c=>c.classList.add('picked'));
   vib(15);
   socket.emit('ask',{rank},res=>{

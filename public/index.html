@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Go Fish Online</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body {
+            margin: 0; padding: 0;
+            background: #1b4d3e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: white; height: 100vh; display: flex; flex-direction: column;
+            justify-content: space-between; overflow: hidden;
+        }
+        #opponent, #player { padding: 10px; text-align: center; }
+        .hand { 
+            display: flex; justify-content: center; flex-wrap: wrap; 
+            gap: 8px; min-height: 85px; max-height: 25vh; overflow-y: auto; 
+        }
+        .card {
+            width: 52px; height: 78px; background: #ffffff; color: #111;
+            border-radius: 8px; display: flex; flex-direction: column;
+            justify-content: space-between; align-items: center; padding: 4px;
+            font-size: 16px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            cursor: pointer; transition: transform 0.1s ease, box-shadow 0.1s;
+        }
+        .card.red { color: #d32f2f; }
+        .card:active { transform: scale(0.92); }
+        .card-back { 
+            background: linear-gradient(135deg, #b71c1c 25%, #880e4e 100%); 
+            border: 2px solid white; color: rgba(255,255,255,0.4); 
+            font-size: 24px; justify-content: center;
+        }
+        #center {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #deck {
+            width: 65px; height: 95px; background: #263238; border: 2px dashed #90a4ae;
+            border-radius: 8px; display: flex; flex-direction: column; justify-content: center; 
+            align-items: center; font-size: 14px; box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+        #deck span { font-size: 18px; font-weight: bold; color: #ffca28; }
+        #status {
+            background: rgba(0,0,0,0.6); padding: 10px 18px; border-radius: 25px;
+            margin-top: 15px; font-size: 14px; max-width: 85%; text-align: center;
+            backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1);
+        }
+        .turn-banner { font-weight: bold; margin-bottom: 8px; font-size: 15px; }
+        .active-turn { color: #00e676; text-shadow: 0 0 10px rgba(0,230,118,0.5); }
+    </style>
+</head>
+<body>
+
+    <div id="opponent">
+        <div class="turn-banner">Соперник (Квартетов: <span id="opp-books">0</span>)</div>
+        <div class="hand" id="opp-hand"></div>
+    </div>
+
+    <div id="center">
+        <div id="deck">Колода<br><span id="deck-count">0</span></div>
+        <div id="status">Ожидание подключения второго игрока...</div>
+    </div>
+
+    <div id="player">
+        <div class="turn-banner" id="turn-txt">Ваши карты (Квартетов: <span id="my-books">0</span>)</div>
+        <div class="hand" id="my-hand"></div>
+    </div>
+
+    <script>
+        const socket = io();
+        let canMove = false;
+
+        socket.on('chat', (msg) => {
+            document.getElementById('status').innerText = msg;
+        });
+
+        socket.on('goFish', (msg) => {
+            document.getElementById('status').innerText = msg;
+        });
+
+        socket.on('state', (state) => {
+            canMove = state.isYourTurn;
+            document.getElementById('deck-count').innerText = state.deckCount;
+            document.getElementById('my-books').innerText = state.yourBooks.length;
+            document.getElementById('opp-books').innerText = state.oppBooks.length;
+
+            const turnTxt = document.getElementById('turn-txt');
+            if (canMove) {
+                turnTxt.innerHTML = "👉 ВАШ ХОД: Нажмите на карту";
+                turnTxt.className = "turn-banner active-turn";
+            } else {
+                turnTxt.innerHTML = "Ожидание хода соперника...";
+                turnTxt.className = "turn-banner";
+            }
+
+            // Рубашки карт соперника
+            const oppHand = document.getElementById('opp-hand');
+            oppHand.innerHTML = '';
+            for (let i = 0; i < state.oppCardCount; i++) {
+                let c = document.createElement('div');
+                c.className = 'card card-back';
+                c.innerText = '🂠';
+                oppHand.appendChild(c);
+            }
+
+            // Карты игрока
+            const myHand = document.getElementById('my-hand');
+            myHand.innerHTML = '';
+            state.yourHand.forEach(card => {
+                let c = document.createElement('div');
+                let isRed = card.suit === '♥' || card.suit === '♦';
+                c.className = `card ${isRed ? 'red' : ''}`;
+                c.innerHTML = `<div>${card.rank}</div><div>${card.suit}</div><div>${card.rank}</div>`;
+                
+                // Ход в одно нажатие прямо по карте:
+                c.onclick = () => {
+                    if (canMove) {
+                        socket.emit('askCard', card.rank);
+                    }
+                };
+                myHand.appendChild(c);
+            });
+        });
+    </script>
+</body>
+</html>

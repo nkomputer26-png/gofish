@@ -35,10 +35,10 @@ button{cursor:pointer}
     radial-gradient(ellipse at 50% 40%,var(--felt1) 0%,var(--felt2) 55%,var(--felt3) 100%);
   box-shadow:inset 0 0 90px rgba(0,0,0,.65)}
 .top{display:flex;align-items:center;gap:8px;padding:8px 12px 4px;min-height:44px}
-.brand{font-family:var(--serif);font-weight:800;font-size:18px;letter-spacing:.2px;color:var(--gold);flex:1}
+.brand{font-family:var(--serif);font-weight:800;font-size:16px;letter-spacing:.2px;color:var(--gold);flex:1}
 .roomtag{background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-.iconbtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--glass);color:#fff;font-size:15px;
+.iconbtn{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--glass);color:#fff;font-size:15px;
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .iconbtn:active{transform:scale(.92)}
 
@@ -69,12 +69,12 @@ button{cursor:pointer}
 .cntbadge{position:absolute;right:0;bottom:-2px;background:rgba(0,0,0,.5);border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700}
 
 /* ---------- Центр ---------- */
-.center{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;padding:4px 14px}
+.center{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;padding:4px 14px}
 .status{align-self:center;text-align:center;font-size:13px;font-weight:700;padding:6px 14px;border-radius:999px;background:rgba(0,0,0,.35);
   border:1px solid var(--line);transition:.3s;max-width:100%}
 .status.you{background:var(--gold);color:#1b1400;border-color:var(--gold-d)}
 .status.warn{background:#7f1d1d;border-color:#f87171;animation:blink 1.4s infinite}
-.mid{flex:1;min-height:0;display:flex;gap:12px;align-items:stretch}
+.mid{flex:1;min-height:0;display:flex;gap:12px;align-items:center;justify-content:center}
 .deck{width:74px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
 .stack{position:relative;width:52px;height:73px}
 .stack .card{--cw:52px;position:absolute;left:0;top:0}
@@ -96,7 +96,7 @@ button{cursor:pointer}
 @keyframes slideIn{from{opacity:0;transform:translateY(-10px)}}
 
 /* ---------- Карты ---------- */
-.card{--cw:60px;width:var(--cw);height:calc(var(--cw)*1.4);border-radius:calc(var(--cw)*.13);position:relative;flex:none;
+.card{width:var(--cw);height:calc(var(--cw)*1.4);border-radius:calc(var(--cw)*.13);position:relative;flex:none;
   transition:transform .28s cubic-bezier(.2,.9,.3,1.3),box-shadow .28s;box-shadow:0 3px 8px rgba(0,0,0,.45)}
 .card.face{background:linear-gradient(160deg,#fff,var(--ivory) 70%,#efe6d2);color:var(--blk);border:1px solid #cfc5ae;font-family:var(--serif);cursor:pointer}
 .card.face.red{color:var(--red)}
@@ -120,7 +120,7 @@ button{cursor:pointer}
 .card.new{animation:dealIn .5s cubic-bezier(.2,.9,.3,1.2) backwards}
 @keyframes dealIn{from{opacity:0;transform:translate(-30vw,-45vh) rotate(-25deg) scale(.6)}60%{opacity:1}}
 
-.hand{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:5px;height:clamp(150px,36vh,300px);height:clamp(150px,36dvh,300px);padding-top:24px}
+.hand{--cw:60px;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:5px;height:clamp(150px,36vh,300px);height:clamp(150px,36dvh,300px);padding-top:24px}
 .grp{position:relative;isolation:isolate;z-index:0;width:var(--cw);flex:none;transition:transform .28s cubic-bezier(.2,.9,.3,1.3)}
 .grp.up{z-index:6;transform:translateY(-24px) scale(1.06)}
 .hand .grp:active{transform:translateY(-8px)}
@@ -185,6 +185,21 @@ button{cursor:pointer}
 .score b{font-family:var(--serif);font-size:46px;color:var(--gold);line-height:1}
 .score span.vs{font-size:28px;opacity:.5}
 
+.slots{display:flex;gap:5px}
+.slot{position:relative;width:24px;height:30px;border-radius:6px;border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-weight:800;font-size:13px;color:transparent}
+.slot.full{border:2px solid #fff3c4;background:linear-gradient(160deg,#ffd466,#c8962a);color:#2a1d00;box-shadow:0 2px 6px rgba(0,0,0,.45)}
+.slot.full::before{content:"";position:absolute;left:0;right:0;top:9px;height:2px;background:rgba(80,50,0,.4)}
+.slot.pop{animation:pop .7s}
+.bubble{position:absolute;left:50%;z-index:6;max-width:88%;text-align:center;padding:9px 16px;border-radius:16px;font-weight:800;font-size:15px;opacity:0;
+  transform:translateX(-50%) scale(.7);transition:opacity .25s,transform .3s cubic-bezier(.2,.9,.3,1.4);pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,.4)}
+.bubble.on{opacity:1;transform:translateX(-50%) scale(1)}
+.bubble.opp{top:40px;background:#e0f2fe;color:#0c2a44}
+.bubble.me{bottom:6px;background:var(--gold);color:#1b1400}
+.bubble::after{content:"";position:absolute;left:50%;margin-left:-7px;border:7px solid transparent}
+.bubble.opp::after{top:-13px;border-bottom-color:#e0f2fe}
+.bubble.me::after{bottom:-13px;border-top-color:var(--gold)}
+.ghost{position:fixed;z-index:55;pointer-events:none;will-change:transform}
 @media (max-height:520px){
   .top{padding:2px 10px;min-height:34px}.zone{padding:5px 8px;margin:2px 8px}.opphand{height:44px}.hand{padding-top:18px}.status{padding:3px 12px}
   .opphand .card{--cw:30px}
@@ -199,6 +214,8 @@ button{cursor:pointer}
   <header class="top">
     <div class="brand">🎣 Go Fish</div>
     <div class="roomtag" id="roomTag">Комната</div>
+    <button class="iconbtn" id="btnTempo" title="Темп игры">🐢</button>
+    <button class="iconbtn" id="btnSnd" title="Звук">🔊</button>
     <button class="iconbtn" id="btnShare" title="Пригласить">🔗</button>
     <button class="iconbtn" id="btnLeave" title="Выйти">✕</button>
   </header>
@@ -206,26 +223,26 @@ button{cursor:pointer}
   <section class="zone opp" id="zoneOpp">
     <div class="zhead">
       <div class="who"><span class="dot" id="oppDot"></span>Соперник<span class="turnflag">ходит</span></div>
-      <div class="bookbox"><div class="chips" id="oppChips"></div><span class="bk-n" id="oppBookN">0</span><span class="bk-l">из 4</span></div>
+      <div class="bookbox"><span class="bk-l">Сундучки</span><div class="slots" id="oppSlots"></div></div>
     </div>
     <div class="opphand" id="oppHand"></div>
   </section>
 
   <section class="center">
     <div class="status" id="status">Загрузка…</div>
+    <div class="bubble opp" id="bbOpp"></div><div class="bubble me" id="bbMe"></div>
     <div class="mid">
       <div class="deck">
         <div class="stack" id="stack"><div class="card back"></div><div class="card back"></div><div class="card back"></div><div class="deckcnt" id="deckCnt">52</div></div>
         <div class="lbl">Колода</div>
       </div>
-      <div class="log" id="log"></div>
     </div>
   </section>
 
   <section class="zone me" id="zoneMe">
     <div class="zhead">
       <div class="who">Вы<span class="turnflag">ваш ход</span></div>
-      <div class="bookbox"><div class="chips" id="meChips"></div><span class="bk-n" id="meBookN">0</span><span class="bk-l">из 4</span></div>
+      <div class="bookbox"><span class="bk-l">Сундучки</span><div class="slots" id="meSlots"></div></div>
     </div>
     <div class="hand" id="hand"></div>
   </section>
@@ -238,7 +255,7 @@ button{cursor:pointer}
   <div class="panel">
     <div class="suits">♠<span class="r">♥</span>♣<span class="r">♦</span></div>
     <h1>Берите карту!</h1>
-    <p>Go Fish для двоих. Побеждает тот, кто первым соберёт 4 квартета.</p>
+    <p>Go Fish для двоих. Побеждает тот, кто первым соберёт 4 сундучка.</p>
     <button class="btn" id="btnCreate">Создать комнату</button>
     <div class="or">или войдите по коду</div>
     <div class="row">
@@ -289,6 +306,37 @@ const SYM={S:'♠\uFE0E',H:'♥\uFE0E',D:'♦\uFE0E',C:'♣\uFE0E'};
 const cardsText=(r,n)=>n===1?RW[r][1]:n+' '+RW[r][2];
 const $=id=>document.getElementById(id);
 const vib=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
+const pref=(k,d,v)=>{try{if(v===undefined){const x=localStorage.getItem(k);return x===null?d:x}localStorage.setItem(k,v)}catch(e){return d}return v};
+let calm=pref('gf_calm','1')==='1',soundOn=pref('gf_snd','1')==='1';
+const tm=()=>calm?1:.45;                                   // множитель длительности пауз
+const sleep=ms=>new Promise(r=>setTimeout(r,ms*tm()));
+let AC=null;
+function ac(){
+  if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+  if(AC&&AC.state==='suspended')AC.resume();
+  return AC;
+}
+function tone(f,d,type,v,when,slide){
+  const c=ac();if(!c||!soundOn)return;
+  const t=c.currentTime+(when||0),o=c.createOscillator(),g=c.createGain();
+  o.type=type||'sine';o.frequency.setValueAtTime(f,t);
+  if(slide)o.frequency.exponentialRampToValueAtTime(slide,t+d);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v||.06,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+  o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d+.05);
+}
+function sfx(n){
+  switch(n){
+    case'ask':tone(520,.18,'triangle',.06);tone(660,.2,'triangle',.05,.12);break;
+    case'card':tone(900,.16,'square',.02,0,300);break;
+    case'fish':tone(440,.25,'triangle',.07);tone(330,.35,'triangle',.07,.2);break;
+    case'lucky':tone(660,.15,'triangle',.07);tone(880,.25,'triangle',.07,.12);break;
+    case'book':[523,659,784,1047].forEach((f,i)=>tone(f,.25,'triangle',.07,i*.1));break;
+    case'turn':tone(700,.2,'sine',.05);break;
+    case'win':[523,659,784,1047,1319].forEach((f,i)=>tone(f,.3,'triangle',.08,i*.12));break;
+    case'lose':tone(330,.4,'triangle',.07);tone(247,.5,'triangle',.07,.25);break;
+  }
+}
+document.addEventListener('pointerdown',()=>ac(),{once:true});
 
 /* ---------- Идентификация и сессия ---------- */
 function store(k,v){try{if(v===undefined)return sessionStorage.getItem(k);if(v===null)sessionStorage.removeItem(k);else sessionStorage.setItem(k,v)}catch(e){}return null}
@@ -355,6 +403,15 @@ $('btnLeave').onclick=()=>{
 };
 $('btnRematch').onclick=()=>{socket.emit('rematch');$('btnRematch').disabled=true};
 
+/* ---------- Настройки ---------- */
+function syncPrefs(){
+  $('btnTempo').textContent=calm?'🐢':'🐇';$('btnTempo').title=calm?'Темп: спокойно':'Темп: быстро';
+  $('btnSnd').textContent=soundOn?'🔊':'🔇';
+}
+$('btnTempo').onclick=()=>{calm=!calm;pref('gf_calm',null,calm?'1':'0');syncPrefs();fx('toast',calm?'Темп: спокойно':'Темп: быстро','')};
+$('btnSnd').onclick=()=>{soundOn=!soundOn;pref('gf_snd',null,soundOn?'1':'0');syncPrefs();if(soundOn)sfx('turn')};
+syncPrefs();
+
 /* ---------- Приглашение ---------- */
 function link(){return location.origin+location.pathname+'?room='+(S?S.code:'')}
 function copyText(t){
@@ -385,15 +442,10 @@ function runFx(){
 
 function playEvent(e){
   const you=e.by==='you';
-  if(e.kind==='take'){
-    if(you){fx('toast','+'+(e.count===1?'1 '+RW[e.rank][0]:e.count+' '+RW[e.rank][2])+'!','good');vib(25)}
-    else fx('toast','Соперник забрал: '+cardsText(e.rank,e.count),'bad');
-  }else if(e.kind==='fish'){
+  if(e.kind==='fish'){
     fx('banner',you?'БЕРИТЕ КАРТУ!':'СОПЕРНИК БЕРЁТ КАРТУ','');if(you)vib([30,40,30]);
-  }else if(e.kind==='draw'&&e.lucky){
-    fx('toast',you?'Повезло! Ходите ещё':'Сопернику повезло — он ходит снова',you?'good':'bad');
   }else if(e.kind==='book'){
-    fx('toast','📚 Квартет: '+RW[e.rank][3]+'!',you?'good':'bad');vib(60);
+    fx('toast','📚 Сундучок: '+RW[e.rank][3]+'!',you?'good':'bad');vib(60);
   }
 }
 
@@ -406,7 +458,7 @@ function logText(e){
     case'draw':return you?'Вы вытянули карту из колоды'+(e.drawn?' ('+RW[e.drawn][0]+')':'')+(e.lucky?' — повезло!':''):'Соперник вытянул карту из колоды'+(e.lucky?' — и ему повезло!':'');
     case'empty':return 'Колода пуста — ход переходит '+(you?'к сопернику':'к вам');
     case'refill':return you?'Рука пуста — вы взяли карту из колоды':'У соперника пустая рука — он взял карту';
-    case'book':return (you?'Вы собрали':'Соперник собрал')+' квартет: '+RW[e.rank][3];
+    case'book':return (you?'Вы собрали':'Соперник собрал')+' сундучок: '+RW[e.rank][3];
     case'left':return you?'Вы отключились':'Соперник отключился';
     case'back':return you?'Вы вернулись в игру':'Соперник вернулся';
     case'over':return 'Игра окончена';
@@ -414,31 +466,144 @@ function logText(e){
   return '';
 }
 
-/* ---------- Состояние ---------- */
-let pending=null,pendT=null,lastPick=0,busy=false;
+/* ---------- Состояние и пошаговый показ хода ---------- */
+const PLAYABLE=new Set(['take','fish','draw','empty','book','refill']);
+const PL={A:'Тузы',K:'Короли',Q:'Дамы',J:'Валеты','10':'Десятки','9':'Девятки','8':'Восьмёрки','7':'Семёрки','6':'Шестёрки','5':'Пятёрки','4':'Четвёрки','3':'Тройки','2':'Двойки'};
+const stateQ=[];let pumping=false,anim=false,busy=false;
 let known=new Set(),prevOpp=0,prevMeBooks=0,prevOppBooks=0,overShown=false,overT=null,prevTurn=null;
 
-socket.on('state',s=>{
-  pending=s;
-  if(pendT)return;
-  const wait=lastPick?Math.max(0,360-(Date.now()-lastPick)):0; // даём доиграть анимацию тапа по карте
-  pendT=setTimeout(()=>{pendT=null;lastPick=0;busy=false;const st=pending;pending=null;apply(st)},wait);
-});
+socket.on('state',s=>{stateQ.push(s);if(!pumping)pump()});
+async function pump(){
+  pumping=true;
+  while(stateQ.length){
+    const s=stateQ.shift();
+    try{await present(s,stateQ.length>0)}catch(err){console.error(err);anim=false;apply(s)}
+  }
+  pumping=false;
+}
+async function present(s,hurry){
+  const fresh0=!S||S.code!==s.code;
+  const fresh=fresh0?[]:s.log.filter(e=>e.id>seen);
+  const play=fresh.some(e=>PLAYABLE.has(e.kind))&&!fresh.some(e=>e.kind==='start');
+  if(fresh0||hurry||document.hidden||S.phase!=='playing'||!play){apply(s);return}
+  anim=true;
+  try{await timeline(S,s,fresh)}catch(err){console.error(err)}
+  anim=false;
+  s.you.hand.forEach(c=>known.add(c.id)); // прилетевшие карты уже показаны, повторно не «раздаём»
+  apply(s);
+}
+
+const ctr=el=>{const r=el.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2}};
+const ghost=(html,cw)=>'<div style="--cw:'+(cw||56)+'px">'+html+'</div>';
+function fly(html,from,to,o){
+  o=o||{};
+  const el=document.createElement('div');
+  el.className='ghost';el.innerHTML=html;
+  el.style.left=from.x+'px';el.style.top=from.y+'px';
+  $('fx').appendChild(el);
+  const dx=to.x-from.x,dy=to.y-from.y;
+  const anim=el.animate([
+    {transform:'translate(-50%,-50%) scale(1) rotate(0deg)',opacity:0},
+    {transform:'translate(-50%,-50%) scale(1) rotate(0deg)',opacity:1,offset:.12},
+    {transform:'translate(calc(-50% + '+dx+'px),calc(-50% + '+dy+'px)) scale('+(o.scale||1)+') rotate('+(o.rot||0)+'deg)',opacity:1}
+  ],{duration:(o.dur||800)*tm(),delay:(o.delay||0)*tm(),easing:'cubic-bezier(.3,.7,.3,1)',fill:'both'});
+  return anim.finished.then(()=>el.remove()).catch(()=>el.remove());
+}
+async function say(who,text,ms){
+  const el=$(who==='you'?'bbMe':'bbOpp');
+  el.textContent=text;el.classList.remove('on');void el.offsetWidth;el.classList.add('on');
+  await sleep(ms);
+  el.classList.remove('on');
+}
+function suitsMissing(rank,hand){
+  const have=new Set(hand.filter(c=>c.r===rank).map(c=>c.s));
+  return ['S','H','D','C'].filter(x=>!have.has(x)).map(x=>({id:rank+x,r:rank,s:x}));
+}
+
+async function timeline(prev,next,fresh){
+  const prevIds=new Set(prev.you.hand.map(c=>c.id)),nextIds=new Set(next.you.hand.map(c=>c.id));
+  const gained=next.you.hand.filter(c=>!prevIds.has(c.id));   // карты, пришедшие мне
+  const lost=prev.you.hand.filter(c=>!nextIds.has(c.id));     // карты, ушедшие от меня
+  const used=new Set(),bookIdx={you:prev.you.books.length,opp:prev.opp.books.length};
+  let deckDisp=prev.deck;
+  const pickGained=rank=>{
+    let c=gained.find(x=>x.r===rank&&!used.has(x.id));
+    if(!c)c=suitsMissing(rank,prev.you.hand).find(x=>!used.has(x.id))||{id:rank+'S',r:rank,s:'S'};
+    used.add(c.id);return c;
+  };
+  const deckPt=()=>ctr($('stack'));
+
+  for(const e of fresh){
+    const you=e.by==='you',who=you?'you':'opp',other=you?'opp':'you';
+
+    if(e.kind==='take'||e.kind==='fish'){
+      sfx('ask');
+      await say(who,'У вас есть '+PL[e.rank]+'?',1800);
+    }
+    if(e.kind==='take'){
+      sfx('card');
+      let cards;
+      if(you){
+        cards=gained.filter(c=>c.r===e.rank&&!used.has(c.id));
+        if(cards.length<e.count)cards=suitsMissing(e.rank,prev.you.hand).slice(0,e.count);
+        cards.forEach(c=>used.add(c.id));
+      }else{
+        cards=lost.filter(c=>c.r===e.rank);
+        const st=$('hand').querySelector('.card[data-rank="'+e.rank+'"]');if(st)st.style.opacity='.25';
+      }
+      const from=you?ctr($('oppHand')):ctr($('hand')),to=you?ctr($('hand')):ctr($('oppHand'));
+      say(other,'Да, держите!',1100);
+      await sleep(500);
+      await Promise.all(cards.map((c,i)=>fly(ghost(cardHTML(c)),from,to,{dur:850,delay:i*200,rot:i*4-4})));
+      await sleep(500);
+    }else if(e.kind==='fish'){
+      sfx('fish');
+      fx('banner',you?'БЕРИТЕ КАРТУ!':'СОПЕРНИК БЕРЁТ КАРТУ','');
+      if(you)vib([30,40,30]);
+      await sleep(1600);
+    }else if(e.kind==='draw'||e.kind==='refill'){
+      sfx('card');
+      deckDisp=Math.max(0,deckDisp-1);
+      const from=deckPt(),to=you?ctr($('hand')):ctr($('oppHand'));
+      const html=you?ghost(cardHTML(pickGained(e.drawn))):ghost('<div class="card back"></div>');
+      await fly(html,from,to,{dur:900,rot:you?0:6});
+      $('deckCnt').textContent=deckDisp;
+      $('stack').classList.toggle('empty',deckDisp===0);
+      if(e.kind==='draw'&&e.lucky){sfx('lucky');await say(who,'Та самая! Хожу ещё',1300)}
+      else await sleep(600);
+    }else if(e.kind==='empty'){
+      fx('toast','Колода пуста','');
+      await sleep(1100);
+    }else if(e.kind==='book'){
+      sfx('book');
+      const slots=$(you?'meSlots':'oppSlots'),slot=slots.children[Math.min(bookIdx[who]++,3)];
+      const from=you?ctr($('hand')):ctr($('oppHand')),to=ctr(slot);
+      const cards=['S','H','D','C'].map(x=>({id:e.rank+x,r:e.rank,s:x}));
+      fx('toast','📚 Сундучок: '+RW[e.rank][3]+'!',you?'good':'bad');
+      vib(60);
+      await Promise.all(cards.map((c,i)=>fly(ghost(cardHTML(c),50),from,to,{dur:950,delay:i*150,scale:.4,rot:i*8-12})));
+      await sleep(600);
+    }
+  }
+  if(next.phase==='playing'&&prev.turn!==next.turn){
+    $('status').textContent='Ход переходит…';
+    await sleep(700);
+  }
+}
 
 function apply(s){
   const fresh0=!S||S.code!==s.code;
-  const prev=S;S=s;
+  S=s;busy=false;
   if(fresh0){seen=s.logSeq;known=new Set();prevOpp=s.opp.count;prevMeBooks=s.you.books.length;prevOppBooks=s.opp.books.length;overShown=false;prevTurn=null}
   const fresh=s.log.filter(e=>e.id>seen);seen=s.logSeq;
   if(fresh.some(e=>e.kind==='start')){known=new Set();overShown=false;prevOpp=0;$('btnRematch').disabled=false}
-  if(!fresh0)fresh.slice(-4).forEach(playEvent);
   render(s,fresh,fresh0);
-  if(s.turn==='you'&&prevTurn&&prevTurn!=='you')vib(40);
+  if(s.turn==='you'&&prevTurn&&prevTurn!=='you'){vib(40);sfx('turn')}
   prevTurn=s.turn;
 }
 
 function render(s,fresh,isNew){
-  $('roomTag').textContent='Комната '+s.code;
+  $('roomTag').textContent='№ '+s.code;
   $('ovLobby').classList.remove('on');
   $('ovWait').classList.toggle('on',s.phase==='waiting');
   $('waitCode').textContent=s.code;
@@ -463,7 +628,6 @@ function render(s,fresh,isNew){
   $('stack').classList.toggle('empty',s.deck===0);
   renderOpp(s.opp.count);
   renderHand(s.you.hand,s.phase==='playing'&&s.turn==='you'&&s.opp.connected);
-  renderLog(s.log,fresh);
 
   // финал
   if(s.phase==='over'){
@@ -473,9 +637,9 @@ function render(s,fresh,isNew){
         if(!S||S.phase!=='over')return;
         $('overTitle').textContent=S.winner==='you'?'🏆 Победа!':S.winner==='opp'?'Соперник победил':'Ничья';
         $('scMe').textContent=S.you.books.length;$('scOpp').textContent=S.opp.books.length;
-        $('ovOver').classList.add('on');updateOver();
+        sfx(S.winner==='you'?'win':S.winner==='opp'?'lose':'turn');$('ovOver').classList.add('on');updateOver();
       };
-      if(isNew)show();else overT=setTimeout(show,1700);
+      if(isNew)show();else overT=setTimeout(show,600);
     }else updateOver();
   }else{$('ovOver').classList.remove('on');clearTimeout(overT)}
 }
@@ -488,9 +652,9 @@ function updateOver(){
 }
 
 function renderBooks(who,list,prevN){
-  $(who+'Chips').innerHTML=list.map(r=>'<span class="chip">'+r+'</span>').join('');
-  const n=$(who+'BookN');n.textContent=list.length;
-  if(list.length>prevN){n.classList.remove('bump');void n.offsetWidth;n.classList.add('bump')}
+  let h='';
+  for(let i=0;i<4;i++)h+=list[i]?'<span class="slot full'+(i>=prevN?' pop':'')+'">'+list[i]+'</span>':'<span class="slot"></span>';
+  $(who+'Slots').innerHTML=h;
 }
 
 function renderOpp(n){
@@ -551,14 +715,14 @@ $('hand').addEventListener('click',e=>{
     hand.classList.remove('shake');void hand.offsetWidth;hand.classList.add('shake');
     fx('toast','Сейчас ход соперника','bad');return;
   }
-  if(busy)return;
-  busy=true;lastPick=Date.now();
+  if(busy||anim)return;
+  busy=true;
   const rank=card.dataset.rank;
   hand.querySelectorAll('.card[data-rank="'+rank+'"]').forEach(c=>c.classList.add('picked'));
   vib(15);
   socket.emit('ask',{rank},res=>{
     if(res&&!res.ok){
-      busy=false;lastPick=0;
+      busy=false;
       hand.querySelectorAll('.picked').forEach(c=>c.classList.remove('picked'));
       hand.querySelectorAll('.grp.up').forEach(c=>c.classList.remove('up'));
       fx('toast',res.error||'Ошибка хода','bad');

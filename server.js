@@ -5,6 +5,7 @@ const http = require('http');
 const crypto = require('crypto');
 const express = require('express');
 const { Server } = require('socket.io');
+const perudo = require('./perudo');
 
 const PORT = process.env.PORT || 3000;
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -27,6 +28,14 @@ app.disable('x-powered-by');
 app.get('/healthz', (req, res) => res.type('text').send('ok'));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// По коду комнаты определяем, какая это игра (для ссылок вида /?room=1234)
+app.get('/api/room/:code', (req, res) => {
+  const code = String(req.params.code || '');
+  if (rooms.has(code)) return res.json({ game: 'fish' });
+  if (perudo.rooms.has(code)) return res.json({ game: 'perudo' });
+  res.status(404).json({ error: 'not found' });
+});
+
 /* ------------------------------ Комнаты ------------------------------ */
 
 const rooms = new Map();
@@ -34,7 +43,7 @@ const rooms = new Map();
 function genCode() {
   for (let i = 0; i < 300; i++) {
     const c = String(crypto.randomInt(0, 10000)).padStart(4, '0');
-    if (!rooms.has(c)) return c;
+    if (!rooms.has(c) && !perudo.rooms.has(c)) return c;
   }
   return null;
 }
@@ -271,6 +280,8 @@ function detach(socket, { explicit = false } = {}) {
   if (room.players.every(x => !x.connected)) scheduleCleanup(room);
   broadcast(room);
 }
+
+perudo.attach(io, { genCode });
 
 io.on('connection', socket => {
   socket.on('create', (data, cb) => {

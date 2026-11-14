@@ -59,7 +59,9 @@ function createRoom(code) {
     seq: 0,
     rematch: new Set(),
     winner: null,
-    timer: null
+    timer: null,
+    mem: new Set(),
+    botTimer: null
   };
   rooms.set(code, room);
   return room;
@@ -68,7 +70,7 @@ function createRoom(code) {
 function scheduleCleanup(room) {
   clearTimeout(room.timer);
   room.timer = setTimeout(() => {
-    if (room.players.every(p => !p.connected)) rooms.delete(room.code);
+    if (room.players.every(p => p.bot || !p.connected)) { clearTimeout(room.botTimer); rooms.delete(room.code); }
   }, ROOM_TTL);
 }
 
@@ -120,6 +122,7 @@ function startGame(room) {
   room.log = [];
   room.rematch.clear();
   room.winner = null;
+  room.mem = new Set();
   room.phase = 'playing';
   for (const p of room.players) {
     p.hand = [];
@@ -135,6 +138,7 @@ function startGame(room) {
 // Если рука пуста, а в колоде есть карты — берём одну. Затем проверяем конец игры.
 function settle(room) {
   if (room.phase !== 'playing') return;
+  for (const p of room.players) p.books.forEach(r => room.mem.delete(r));
   for (const p of room.players) {
     if (p.hand.length === 0 && room.deck.length > 0) {
       p.hand.push(room.deck.pop());
@@ -168,6 +172,8 @@ function handleAsk(room, p, rank) {
   if (!RANKS.includes(rank) || !p.hand.some(c => c.r === rank)) return 'У вас нет такой карты';
 
   const o = otherOf(room, p.cid);
+  if (!p.bot) room.mem.add(rank); // человек просил этот ранг — значит, он у него есть
+  else room.mem.delete(rank);
   const taken = o.hand.filter(c => c.r === rank);
 
   if (taken.length) {
@@ -211,6 +217,7 @@ function viewFor(room, p) {
     opp: {
       present: !!o,
       connected: !!(o && o.connected),
+      bot: !!(o && o.bot),
       count: o ? o.hand.length : 0,
       books: o ? o.books : []
     },
@@ -227,6 +234,49 @@ function viewFor(room, p) {
     winner,
     rematch: { you: room.rematch.has(p.cid), opp: !!(o && room.rematch.has(o.cid)) }
   };
+}
+
+/* ------------------------------ Мистер Свин (бот) ------------------------------ */
+
+function botAsk(room) {
+  const bot = room.players.find(p => p.bot);
+  if (!bot || room.phase !== 'playing' || room.turn !== bot.cid) return;
+  const counts = {};
+  bot.hand.forEach(c => { counts[c.r] = (counts[c.r] || 0) + 1; });
+  const ranks = Object.keys(counts);
+  if (!ranks.length) return;
+  const best = list => {
+    const m = Math.max(...list.map(r => counts[r]));
+    const top = list.filter(r => counts[r] === m);
+    return top[crypto.randomInt(top.length)];
+  };
+  const known = ranks.filter(r => room.mem.has(r));   // ранги, которые точно есть у игрока
+  let pick;
+  if (known.length && Math.random() < 0.88) pick = best(known);
+  else if (Math.random() < 0.2) pick = ranks[crypto.randomInt(ranks.length)];
+  else pick = best(ranks);
+  if (handleAsk(room, bot, pick)) {
+    for (const r of ranks) if (!handleAsk(room, bot, r)) break;
+  }
+}
+
+// Ход бота ждёт, пока у игрока доиграют анимации предыдущего действия
+function scheduleBot(room, delay) {
+  clearTimeout(room.botTimer);
+  const bot = room.players.find(p => p.bot);
+  if (!bot || room.phase !== 'playing' || room.turn !== bot.cid) return;
+  const human = room.players.find(p => !p.bot);
+  if (!human || !human.connected) return;
+  room.botTimer = setTimeout(() => {
+    if (room.phase !== 'playing' || room.turn !== bot.cid || !human.connected) return;
+    botAsk(room);
+    change(room);
+  }, delay || 6000);
+}
+
+function change(room, delay) {
+  broadcast(room);
+  scheduleBot(room, delay);
 }
 
 function broadcast(room) {
@@ -277,8 +327,8 @@ function detach(socket, { explicit = false } = {}) {
   p.connected = false;
   p.sid = null;
   if (room.phase !== 'waiting') addLog(room, { kind: 'left', by: p.cid });
-  if (room.players.every(x => !x.connected)) scheduleCleanup(room);
-  broadcast(room);
+  if (room.players.every(x => x.bot || !x.connected)) scheduleCleanup(room);
+  change(room);
 }
 
 perudo.attach(io, { genCode });
@@ -294,8 +344,12 @@ io.on('connection', socket => {
     if (!code) return cb({ ok: false, error: 'Не удалось создать комнату' });
     const room = createRoom(code);
     attach(socket, room, cid);
+    if (data && data.vsBot) {
+      room.players.push({ cid: 'bot-' + crypto.randomBytes(4).toString('hex'), sid: null, connected: true, bot: true, hand: [], books: [] });
+      startGame(room);
+    }
     cb({ ok: true, code });
-    broadcast(room);
+    change(room, 3500);
   });
 
   socket.on('join', (data, cb) => {
@@ -311,7 +365,7 @@ io.on('connection', socket => {
     if (!p) return cb({ ok: false, error: 'В комнате уже два игрока' });
     if (room.phase === 'waiting' && room.players.length === 2) startGame(room);
     cb({ ok: true, code });
-    broadcast(room);
+    change(room);
   });
 
   socket.on('ask', (data, cb) => {
@@ -323,17 +377,18 @@ io.on('connection', socket => {
     const err = handleAsk(room, p, data && data.rank);
     if (err) return cb({ ok: false, error: err });
     cb({ ok: true });
-    broadcast(room);
+    change(room);
   });
 
   socket.on('rematch', () => {
     const room = rooms.get(socket.data.room);
     if (!room || room.phase !== 'over') return;
     room.rematch.add(socket.data.cid);
+    room.players.filter(p => p.bot).forEach(b => room.rematch.add(b.cid));
     if (room.players.length === 2 && room.players.every(x => x.connected && room.rematch.has(x.cid))) {
       startGame(room);
     }
-    broadcast(room);
+    change(room);
   });
 
   socket.on('leave', () => detach(socket, { explicit: true }));

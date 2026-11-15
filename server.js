@@ -7,6 +7,7 @@ const express = require('express');
 const { Server } = require('socket.io');
 const perudo = require('./perudo');
 const blackjack = require('./blackjack');
+const chat = require('./chatlib');
 
 const PORT = process.env.PORT || 3000;
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -337,6 +338,12 @@ perudo.attach(io, { genCode });
 blackjack.attach(io, { genCode });
 
 io.on('connection', socket => {
+  chat.register(socket, (code, ev, m) => io.to(code).emit(ev, m), s => {
+    const room = rooms.get(s.data.room);
+    const idx = room ? room.players.findIndex(x => x.cid === s.data.cid) : -1;
+    return idx >= 0 ? { room, name: 'Игрок ' + (idx + 1) } : null;
+  });
+
   socket.on('create', (data, cb) => {
     cb = typeof cb === 'function' ? cb : () => {};
     const cid = sanitizeCid(data && data.clientId);

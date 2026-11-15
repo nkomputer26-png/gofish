@@ -1,82 +1,424 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#072c22">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<title>Игры за столом</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;800&display=swap" rel="stylesheet">
-<style>
-:root{--gold:#f2c14e;--ivory:#fbf7ee;--line:rgba(255,255,255,.16);--serif:'Playfair Display',Georgia,serif;--sans:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;touch-action:manipulation;-webkit-user-select:none;user-select:none;color:#fff;font-family:var(--sans);background:#06261d}
-body{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));
-  background:radial-gradient(ellipse at 50% 35%,rgba(255,255,255,.1),transparent 60%),radial-gradient(ellipse at 50% 40%,#12664b 0%,#0b4a37 55%,#06261d 100%);box-shadow:inset 0 0 100px rgba(0,0,0,.6)}
-.wrap{width:100%;max-width:420px;text-align:center}
-.suits{font-size:26px;letter-spacing:10px;color:var(--ivory)}.suits .r{color:#ff7b7b}
-h1{font-family:var(--serif);font-weight:800;font-size:34px;color:var(--gold);margin:6px 0 4px}
-.sub{opacity:.8;font-size:14px;margin:0 0 22px}
-.game{display:flex;align-items:center;gap:14px;width:100%;text-align:left;margin-top:12px;padding:16px;border-radius:22px;border:1px solid var(--line);color:#fff;font-family:inherit;
-  background:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,.05));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 14px 34px rgba(0,0,0,.4);cursor:pointer;text-decoration:none;
-  transition:transform .15s,border-color .2s;animation:rise .6s both}
-.game:nth-of-type(2){animation-delay:.12s}
-.game:nth-of-type(3){animation-delay:.24s}
-.game:active{transform:scale(.97);border-color:var(--gold)}
-@keyframes rise{from{opacity:0;transform:translateY(24px)}}
-.ico{flex:none;width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:34px;background:rgba(0,0,0,.28);border:1px solid var(--line)}
-.game b{display:block;font-family:var(--serif);font-size:21px;color:var(--gold)}
-.game span{display:block;font-size:13px;opacity:.82;margin-top:3px;line-height:1.35}
-.go{margin-left:auto;font-size:24px;color:var(--gold)}
-.ver{margin-top:10px;font-size:11px;opacity:.55}
-.msg{min-height:20px;margin-top:16px;color:#fca5a5;font-size:13px;font-weight:600}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="suits">♠<span class="r">♥</span>♣<span class="r">♦</span></div>
-  <h1>Игры за столом</h1>
-  <p class="sub" id="sub">Выберите игру</p>
-  <a class="game" href="/fish.html">
-    <div class="ico">🐷</div>
-    <div><b>Берите карту!</b><span>Go Fish с Мистером Свином. Двое игроков, первый собравший 4 сундучка побеждает.</span></div>
-    <div class="go">›</div>
-  </a>
-  <a class="game" href="/perudo.html">
-    <div class="ico">🎲</div>
-    <div><b>Перудо</b><span>Дудо: блеф и кости в стаканах. От 2 до 6 игроков, можно добавить ботов.</span></div>
-    <div class="go">›</div>
-  </a>
-  <a class="game" href="/blackjack.html">
-    <div class="ico">🃏</div>
-    <div><b>Блэкджек</b><span>Против дилера: 1000 фишек каждому, до 3 рук, сплит, страховка, боты за столом.</span></div>
-    <div class="go">›</div>
-  </a>
-  <div class="msg" id="msg"></div>
-  <div class="ver" id="ver"></div>
-</div>
-<script>
-(function(){
-  // Версия: страница (эта) и сервер. Если сервер «старый» — на Render не обновились файлы.
-  var PAGE='2026-11-15-bj-chat-admin',ver=document.getElementById('ver');
-  fetch('/api/version',{cache:'no-store'}).then(function(r){return r.ok?r.json():Promise.reject()}).then(function(d){
-    ver.textContent='страница '+PAGE+' · сервер '+d.version+(d.version===PAGE?' ✓':' (версии не совпадают)');
-  }).catch(function(){ver.textContent='страница '+PAGE+' · сервер СТАРЫЙ: нет /api/version — обновите server.js на Render';});
-})();
-(function(){
-  // Ссылка вида /?room=1234 — узнаём игру по коду комнаты и сразу отправляем игрока в неё
-  var q=new URLSearchParams(location.search).get('room');
-  if(!q||!/^\d{4}$/.test(q))return;
-  document.getElementById('sub').textContent='Подключаемся к комнате '+q+'…';
-  fetch('/api/room/'+q).then(function(r){return r.ok?r.json():Promise.reject()}).then(function(d){
-    location.replace(({perudo:'/perudo.html',blackjack:'/blackjack.html'}[d.game]||'/fish.html')+'?room='+q);
-  }).catch(function(){
-    document.getElementById('sub').textContent='Выберите игру';
-    document.getElementById('msg').textContent='Комната '+q+' не найдена или уже закрыта';
-    try{history.replaceState(null,'','/')}catch(e){}
+'use strict';
+
+const path = require('path');
+const http = require('http');
+const crypto = require('crypto');
+const express = require('express');
+const { Server } = require('socket.io');
+const perudo = require('./perudo');
+const blackjack = require('./blackjack');
+const chat = require('./chatlib');
+
+const PORT = process.env.PORT || 3000;
+const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+const SUITS = ['S', 'H', 'D', 'C'];
+const HAND_SIZE = 7;
+const WIN_BOOKS = 4; // для победы нужно первым собрать 4 квартета
+const ROOM_TTL = 15 * 60 * 1000; // комната без живых игроков удаляется через 15 минут
+const LOG_LIMIT = 40;
+const MAX_ROOMS = 2000;
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  pingInterval: 10000,
+  pingTimeout: 8000,
+  transports: ['websocket', 'polling']
+});
+
+app.disable('x-powered-by');
+app.get('/healthz', (req, res) => res.type('text').send('ok'));
+// Страницы не кэшируются, чтобы после деплоя сразу открывалась свежая версия
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: false,
+  setHeaders: res => res.setHeader('Cache-Control', 'no-store')
+}));
+
+// Проверка, какая версия сервера реально запущена на Render
+const VERSION = '2026-11-15-bj-chat-admin';
+app.get('/api/version', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ version: VERSION, games: ['fish', 'perudo', 'blackjack'], chat: true });
+});
+
+// По коду комнаты определяем, какая это игра (для ссылок вида /?room=1234)
+app.get('/api/room/:code', (req, res) => {
+  const code = String(req.params.code || '');
+  if (rooms.has(code)) return res.json({ game: 'fish' });
+  if (perudo.rooms.has(code)) return res.json({ game: 'perudo' });
+  if (blackjack.rooms.has(code)) return res.json({ game: 'blackjack' });
+  res.status(404).json({ error: 'not found' });
+});
+
+/* ------------------------------ Комнаты ------------------------------ */
+
+const rooms = new Map();
+
+function genCode() {
+  for (let i = 0; i < 300; i++) {
+    const c = String(crypto.randomInt(0, 10000)).padStart(4, '0');
+    if (!rooms.has(c) && !perudo.rooms.has(c) && !blackjack.rooms.has(c)) return c;
+  }
+  return null;
+}
+
+function createRoom(code) {
+  const room = {
+    code,
+    players: [],
+    deck: [],
+    phase: 'waiting', // waiting | playing | over
+    turn: null,
+    log: [],
+    seq: 0,
+    rematch: new Set(),
+    winner: null,
+    timer: null,
+    mem: new Set(),
+    botTimer: null
+  };
+  rooms.set(code, room);
+  return room;
+}
+
+function scheduleCleanup(room) {
+  clearTimeout(room.timer);
+  room.timer = setTimeout(() => {
+    if (room.players.every(p => p.bot || !p.connected)) { clearTimeout(room.botTimer); rooms.delete(room.code); }
+  }, ROOM_TTL);
+}
+
+function sanitizeCid(v) {
+  return typeof v === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(v) ? v : null;
+}
+
+/* ------------------------------ Игровая логика ------------------------------ */
+
+function makeDeck() {
+  const d = [];
+  for (const s of SUITS) for (const r of RANKS) d.push({ id: r + s, r, s });
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(i + 1);
+    [d[i], d[j]] = [d[j], d[i]];
+  }
+  return d;
+}
+
+function addLog(room, entry) {
+  entry.id = ++room.seq;
+  room.log.push(entry);
+  if (room.log.length > LOG_LIMIT) room.log.shift();
+}
+
+function otherOf(room, cid) {
+  return room.players.find(p => p.cid !== cid) || null;
+}
+
+function sortHand(hand) {
+  hand.sort((a, b) => RANKS.indexOf(a.r) - RANKS.indexOf(b.r) || SUITS.indexOf(a.s) - SUITS.indexOf(b.s));
+}
+
+// Сбрасывает в стопку очков все полные квартеты (4 карты одного ранга)
+function collectBooks(room, p) {
+  const count = {};
+  p.hand.forEach(c => { count[c.r] = (count[c.r] || 0) + 1; });
+  for (const r of Object.keys(count)) {
+    if (count[r] === 4) {
+      p.hand = p.hand.filter(c => c.r !== r);
+      p.books.push(r);
+      addLog(room, { kind: 'book', by: p.cid, rank: r });
+    }
+  }
+}
+
+function startGame(room) {
+  room.deck = makeDeck();
+  room.log = [];
+  room.rematch.clear();
+  room.winner = null;
+  room.mem = new Set();
+  room.phase = 'playing';
+  for (const p of room.players) {
+    p.hand = [];
+    p.books = [];
+    for (let i = 0; i < HAND_SIZE; i++) p.hand.push(room.deck.pop());
+  }
+  room.turn = room.players[crypto.randomInt(2)].cid;
+  addLog(room, { kind: 'start', by: room.turn });
+  for (const p of room.players) collectBooks(room, p);
+  settle(room);
+}
+
+// Если рука пуста, а в колоде есть карты — берём одну. Затем проверяем конец игры.
+function settle(room) {
+  if (room.phase !== 'playing') return;
+  for (const p of room.players) p.books.forEach(r => room.mem.delete(r));
+  for (const p of room.players) {
+    if (p.hand.length === 0 && room.deck.length > 0) {
+      p.hand.push(room.deck.pop());
+      addLog(room, { kind: 'refill', by: p.cid, drawn: p.hand[0].r });
+    }
+  }
+  const [a, b] = room.players;
+  const total = a.books.length + b.books.length;
+  const anyEmpty = a.hand.length === 0 || b.hand.length === 0;
+  let stalemate = false;
+  if (room.deck.length === 0 && !anyEmpty) {
+    const ranksA = new Set(a.hand.map(c => c.r));
+    stalemate = !b.hand.some(c => ranksA.has(c.r)); // никто больше не может ничего забрать
+  }
+  if (a.books.length >= WIN_BOOKS || b.books.length >= WIN_BOOKS || total === 13 ||
+      (room.deck.length === 0 && anyEmpty) || stalemate) endGame(room);
+}
+
+function endGame(room) {
+  const [a, b] = room.players;
+  room.phase = 'over';
+  room.turn = null;
+  room.winner = a.books.length === b.books.length ? 'draw' : (a.books.length > b.books.length ? a.cid : b.cid);
+  addLog(room, { kind: 'over' });
+}
+
+function handleAsk(room, p, rank) {
+  if (room.phase !== 'playing') return 'Игра не идёт';
+  if (room.players.length < 2 || room.players.some(x => !x.connected)) return 'Соперник отключён';
+  if (room.turn !== p.cid) return 'Сейчас не ваш ход';
+  if (!RANKS.includes(rank) || !p.hand.some(c => c.r === rank)) return 'У вас нет такой карты';
+
+  const o = otherOf(room, p.cid);
+  if (!p.bot) room.mem.add(rank); // человек просил этот ранг — значит, он у него есть
+  else room.mem.delete(rank);
+  const taken = o.hand.filter(c => c.r === rank);
+
+  if (taken.length) {
+    // Удача: соперник отдаёт ВСЕ карты этого ранга, ход остаётся у спрашивающего
+    o.hand = o.hand.filter(c => c.r !== rank);
+    p.hand.push(...taken);
+    addLog(room, { kind: 'take', by: p.cid, rank, count: taken.length });
+    collectBooks(room, p);
+  } else {
+    addLog(room, { kind: 'fish', by: p.cid, rank });
+    if (room.deck.length > 0) {
+      const c = room.deck.pop();
+      p.hand.push(c);
+      const lucky = c.r === rank;
+      addLog(room, { kind: 'draw', by: p.cid, drawn: c.r, lucky });
+      collectBooks(room, p);
+      if (!lucky) room.turn = o.cid;
+    } else {
+      addLog(room, { kind: 'empty', by: p.cid });
+      room.turn = o.cid;
+    }
+  }
+  settle(room);
+  return null;
+}
+
+/* ------------------------------ Отправка состояния ------------------------------ */
+
+function viewFor(room, p) {
+  const o = otherOf(room, p.cid);
+  const hand = p.hand.slice();
+  sortHand(hand);
+  let winner = null;
+  if (room.winner) winner = room.winner === 'draw' ? 'draw' : (room.winner === p.cid ? 'you' : 'opp');
+  return {
+    code: room.code,
+    phase: room.phase,
+    deck: room.deck.length,
+    turn: room.phase === 'playing' ? (room.turn === p.cid ? 'you' : 'opp') : null,
+    you: { hand, books: p.books },
+    opp: {
+      present: !!o,
+      connected: !!(o && o.connected),
+      bot: !!(o && o.bot),
+      count: o ? o.hand.length : 0,
+      books: o ? o.books : []
+    },
+    log: room.log.map(e => ({
+      id: e.id,
+      kind: e.kind,
+      by: e.by ? (e.by === p.cid ? 'you' : 'opp') : null,
+      rank: e.rank,
+      count: e.count,
+      lucky: e.lucky,
+      drawn: e.by === p.cid ? e.drawn : undefined // вытянутую карту видит только сам игрок
+    })),
+    logSeq: room.seq,
+    winner,
+    rematch: { you: room.rematch.has(p.cid), opp: !!(o && room.rematch.has(o.cid)) }
+  };
+}
+
+/* ------------------------------ Мистер Свин (бот) ------------------------------ */
+
+function botAsk(room) {
+  const bot = room.players.find(p => p.bot);
+  if (!bot || room.phase !== 'playing' || room.turn !== bot.cid) return;
+  const counts = {};
+  bot.hand.forEach(c => { counts[c.r] = (counts[c.r] || 0) + 1; });
+  const ranks = Object.keys(counts);
+  if (!ranks.length) return;
+  const best = list => {
+    const m = Math.max(...list.map(r => counts[r]));
+    const top = list.filter(r => counts[r] === m);
+    return top[crypto.randomInt(top.length)];
+  };
+  const known = ranks.filter(r => room.mem.has(r));   // ранги, которые точно есть у игрока
+  let pick;
+  if (known.length && Math.random() < 0.88) pick = best(known);
+  else if (Math.random() < 0.2) pick = ranks[crypto.randomInt(ranks.length)];
+  else pick = best(ranks);
+  if (handleAsk(room, bot, pick)) {
+    for (const r of ranks) if (!handleAsk(room, bot, r)) break;
+  }
+}
+
+// Ход бота ждёт, пока у игрока доиграют анимации предыдущего действия
+function scheduleBot(room, delay) {
+  clearTimeout(room.botTimer);
+  const bot = room.players.find(p => p.bot);
+  if (!bot || room.phase !== 'playing' || room.turn !== bot.cid) return;
+  const human = room.players.find(p => !p.bot);
+  if (!human || !human.connected) return;
+  room.botTimer = setTimeout(() => {
+    if (room.phase !== 'playing' || room.turn !== bot.cid || !human.connected) return;
+    botAsk(room);
+    change(room);
+  }, delay || 6000);
+}
+
+function change(room, delay) {
+  broadcast(room);
+  scheduleBot(room, delay);
+}
+
+function broadcast(room) {
+  for (const p of room.players) {
+    if (p.sid) io.to(p.sid).emit('state', viewFor(room, p));
+  }
+}
+
+/* ------------------------------ Сокеты ------------------------------ */
+
+function attach(socket, room, cid) {
+  let p = room.players.find(x => x.cid === cid);
+  if (p) {
+    if (p.sid && p.sid !== socket.id) {
+      const old = io.sockets.sockets.get(p.sid);
+      if (old) { old.data.room = null; old.leave(room.code); old.emit('kicked'); }
+    }
+    const wasOffline = !p.connected;
+    p.sid = socket.id;
+    p.connected = true;
+    if (wasOffline && room.phase !== 'waiting') addLog(room, { kind: 'back', by: p.cid });
+  } else {
+    if (room.players.length >= 2) return null;
+    p = { cid, sid: socket.id, connected: true, hand: [], books: [] };
+    room.players.push(p);
+  }
+  socket.join(room.code);
+  socket.data.room = room.code;
+  socket.data.cid = cid;
+  clearTimeout(room.timer);
+  return p;
+}
+
+function detach(socket, { explicit = false } = {}) {
+  const code = socket.data.room;
+  if (!code) return;
+  socket.data.room = null;
+  socket.leave(code);
+  const room = rooms.get(code);
+  if (!room) return;
+  const p = room.players.find(x => x.cid === socket.data.cid);
+  if (!p || p.sid !== socket.id) return; // игрок уже подключился с другого сокета
+
+  if (explicit && room.phase === 'waiting') {
+    rooms.delete(code);
+    return;
+  }
+  p.connected = false;
+  p.sid = null;
+  if (room.phase !== 'waiting') addLog(room, { kind: 'left', by: p.cid });
+  if (room.players.every(x => x.bot || !x.connected)) scheduleCleanup(room);
+  change(room);
+}
+
+perudo.attach(io, { genCode });
+blackjack.attach(io, { genCode });
+
+io.on('connection', socket => {
+  chat.register(socket, (code, ev, m) => io.to(code).emit(ev, m), s => {
+    const room = rooms.get(s.data.room);
+    const idx = room ? room.players.findIndex(x => x.cid === s.data.cid) : -1;
+    return idx >= 0 ? { room, name: 'Игрок ' + (idx + 1) } : null;
   });
-})();
-</script>
-</body>
-</html>
+
+  socket.on('create', (data, cb) => {
+    cb = typeof cb === 'function' ? cb : () => {};
+    const cid = sanitizeCid(data && data.clientId);
+    if (!cid) return cb({ ok: false, error: 'Ошибка клиента, обновите страницу' });
+    if (rooms.size >= MAX_ROOMS) return cb({ ok: false, error: 'Сервер занят, попробуйте позже' });
+    detach(socket, { explicit: true });
+    const code = genCode();
+    if (!code) return cb({ ok: false, error: 'Не удалось создать комнату' });
+    const room = createRoom(code);
+    attach(socket, room, cid);
+    if (data && data.vsBot) {
+      room.players.push({ cid: 'bot-' + crypto.randomBytes(4).toString('hex'), sid: null, connected: true, bot: true, hand: [], books: [] });
+      startGame(room);
+    }
+    cb({ ok: true, code });
+    change(room, 3500);
+  });
+
+  socket.on('join', (data, cb) => {
+    cb = typeof cb === 'function' ? cb : () => {};
+    const cid = sanitizeCid(data && data.clientId);
+    const code = String((data && data.code) || '').trim();
+    if (!cid) return cb({ ok: false, error: 'Ошибка клиента, обновите страницу' });
+    if (!/^\d{4}$/.test(code)) return cb({ ok: false, error: 'Код комнаты — 4 цифры' });
+    const room = rooms.get(code);
+    if (!room) return cb({ ok: false, error: 'Комната не найдена или уже закрыта' });
+    if (socket.data.room !== code) detach(socket, { explicit: true });
+    const p = attach(socket, room, cid);
+    if (!p) return cb({ ok: false, error: 'В комнате уже два игрока' });
+    if (room.phase === 'waiting' && room.players.length === 2) startGame(room);
+    cb({ ok: true, code });
+    change(room);
+  });
+
+  socket.on('ask', (data, cb) => {
+    cb = typeof cb === 'function' ? cb : () => {};
+    const room = rooms.get(socket.data.room);
+    if (!room) return cb({ ok: false, error: 'Вы не в комнате' });
+    const p = room.players.find(x => x.cid === socket.data.cid);
+    if (!p) return cb({ ok: false, error: 'Вы не в комнате' });
+    const err = handleAsk(room, p, data && data.rank);
+    if (err) return cb({ ok: false, error: err });
+    cb({ ok: true });
+    change(room);
+  });
+
+  socket.on('rematch', () => {
+    const room = rooms.get(socket.data.room);
+    if (!room || room.phase !== 'over') return;
+    room.rematch.add(socket.data.cid);
+    room.players.filter(p => p.bot).forEach(b => room.rematch.add(b.cid));
+    if (room.players.length === 2 && room.players.every(x => x.connected && room.rematch.has(x.cid))) {
+      startGame(room);
+    }
+    change(room);
+  });
+
+  socket.on('leave', () => detach(socket, { explicit: true }));
+  socket.on('disconnect', () => detach(socket));
+});
+
+server.listen(PORT, () => console.log('Go Fish server listening on port ' + PORT));
+
+process.on('SIGTERM', () => {
+  io.close();
+  server.close(() => process.exit(0));
+});

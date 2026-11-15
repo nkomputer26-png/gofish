@@ -22,12 +22,14 @@ h1{font-family:var(--serif);font-weight:800;font-size:34px;color:var(--gold);mar
   background:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,.05));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 14px 34px rgba(0,0,0,.4);cursor:pointer;text-decoration:none;
   transition:transform .15s,border-color .2s;animation:rise .6s both}
 .game:nth-of-type(2){animation-delay:.12s}
+.game:nth-of-type(3){animation-delay:.24s}
 .game:active{transform:scale(.97);border-color:var(--gold)}
 @keyframes rise{from{opacity:0;transform:translateY(24px)}}
 .ico{flex:none;width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:34px;background:rgba(0,0,0,.28);border:1px solid var(--line)}
 .game b{display:block;font-family:var(--serif);font-size:21px;color:var(--gold)}
 .game span{display:block;font-size:13px;opacity:.82;margin-top:3px;line-height:1.35}
 .go{margin-left:auto;font-size:24px;color:var(--gold)}
+.ver{margin-top:10px;font-size:11px;opacity:.55}
 .msg{min-height:20px;margin-top:16px;color:#fca5a5;font-size:13px;font-weight:600}
 </style>
 </head>
@@ -46,16 +48,29 @@ h1{font-family:var(--serif);font-weight:800;font-size:34px;color:var(--gold);mar
     <div><b>Перудо</b><span>Дудо: блеф и кости в стаканах. От 2 до 6 игроков, можно добавить ботов.</span></div>
     <div class="go">›</div>
   </a>
+  <a class="game" href="/blackjack.html">
+    <div class="ico">🃏</div>
+    <div><b>Блэкджек</b><span>Против дилера: 1000 фишек каждому, до 3 рук, сплит, страховка, боты за столом.</span></div>
+    <div class="go">›</div>
+  </a>
   <div class="msg" id="msg"></div>
+  <div class="ver" id="ver"></div>
 </div>
 <script>
+(function(){
+  // Версия: страница (эта) и сервер. Если сервер «старый» — на Render не обновились файлы.
+  var PAGE='2026-11-15-bj-chat-admin',ver=document.getElementById('ver');
+  fetch('/api/version',{cache:'no-store'}).then(function(r){return r.ok?r.json():Promise.reject()}).then(function(d){
+    ver.textContent='страница '+PAGE+' · сервер '+d.version+(d.version===PAGE?' ✓':' (версии не совпадают)');
+  }).catch(function(){ver.textContent='страница '+PAGE+' · сервер СТАРЫЙ: нет /api/version — обновите server.js на Render';});
+})();
 (function(){
   // Ссылка вида /?room=1234 — узнаём игру по коду комнаты и сразу отправляем игрока в неё
   var q=new URLSearchParams(location.search).get('room');
   if(!q||!/^\d{4}$/.test(q))return;
   document.getElementById('sub').textContent='Подключаемся к комнате '+q+'…';
   fetch('/api/room/'+q).then(function(r){return r.ok?r.json():Promise.reject()}).then(function(d){
-    location.replace((d.game==='perudo'?'/perudo.html':'/fish.html')+'?room='+q);
+    location.replace(({perudo:'/perudo.html',blackjack:'/blackjack.html'}[d.game]||'/fish.html')+'?room='+q);
   }).catch(function(){
     document.getElementById('sub').textContent='Выберите игру';
     document.getElementById('msg').textContent='Комната '+q+' не найдена или уже закрыта';

@@ -133,6 +133,12 @@ button,input{font-family:inherit;touch-action:manipulation}button{cursor:pointer
 .rbid{display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--serif);font-weight:800;font-size:26px;color:var(--gold);margin:4px 0}
 .rbid .die{--ds:30px}
 .rules{text-align:left;font-size:13px;line-height:1.45}.rules b{color:var(--gold)}.rules ul{padding-left:18px;margin:6px 0}
+.spy{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap}
+.spy .die{--ds:17px}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:14px;background:rgba(0,0,0,.3);font-weight:700;font-size:15px;text-align:left}
+.sw input{width:46px;height:26px;appearance:none;-webkit-appearance:none;border-radius:999px;background:rgba(255,255,255,.2);position:relative;outline:none;transition:.2s;flex:none}
+.sw input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.sw input:checked{background:var(--gold)}.sw input:checked::after{left:23px}
 .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 56px);z-index:60;transform:translateX(-50%);opacity:0;pointer-events:none;white-space:nowrap;font-weight:800;font-size:17px;padding:9px 18px;border-radius:999px;background:rgba(5,15,34,.92);border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:92vw;overflow:hidden;text-overflow:ellipsis}
 .toast.show{animation:toastA 1.8s both}
 .toast.red{background:linear-gradient(135deg,#7f1d1d,#d9363e)}.toast.gold{background:linear-gradient(135deg,#f2c14e,#e09a1b);color:#1b1400}
@@ -153,6 +159,7 @@ button,input{font-family:inherit;touch-action:manipulation}button{cursor:pointer
     <div class="roomtag" id="roomTag">—</div>
     <button class="iconbtn" id="btnRules" title="Правила">?</button>
     <button class="iconbtn" id="btnSnd" title="Звук">🔊</button>
+    <button class="iconbtn" id="btnChat" title="Чат">💬</button>
     <button class="iconbtn" id="btnShare" title="Пригласить">🔗</button>
     <button class="iconbtn" id="btnLeave" title="Выйти">✕</button>
   </header>
@@ -237,6 +244,15 @@ button,input{font-family:inherit;touch-action:manipulation}button{cursor:pointer
 </div>
 
 <!-- Правила -->
+<!-- Админ-меню (открывается 10 нажатиями на кнопку звука) -->
+<div class="ov" id="ovAdmin" style="z-index:90">
+  <div class="panel">
+    <h2>🛠 Админ-меню</h2>
+    <div id="admBody"></div>
+    <button class="btn sec" id="admClose">Закрыть</button>
+  </div>
+</div>
+
 <div class="ov" id="ovRules">
   <div class="panel rules">
     <h2 style="text-align:center">Правила</h2>
@@ -256,6 +272,7 @@ button,input{font-family:inherit;touch-action:manipulation}button{cursor:pointer
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/chat.js"></script>
 <script>
 (function(){
 'use strict';
@@ -296,6 +313,7 @@ $('nameIn').addEventListener('input',()=>ls('pd_name',$('nameIn').value));
 
 /* ---------- Сокет ---------- */
 const socket=io('/perudo',{reconnectionDelay:500,reconnectionDelayMax:3000});
+initChat({socket:socket,button:document.getElementById('btnChat')});
 let S=null,wantCode=urlRoom()||ss('pd_room'),joining=false;
 socket.on('connect',()=>{$('net').classList.remove('on');if(wantCode)doJoin(wantCode,true)});
 socket.on('disconnect',()=>$('net').classList.add('on'));
@@ -332,7 +350,32 @@ function share(){if(!S)return;if(navigator.share)navigator.share({title:'Пер�
 $('btnShare').onclick=share;$('btnShare2').onclick=share;
 $('roomTag').onclick=()=>{if(S)copyText(link()).then(()=>toast('Ссылка скопирована')).catch(()=>{})};
 function syncSnd(){$('btnSnd').textContent=soundOn?'🔊':'🔇'}
-$('btnSnd').onclick=()=>{soundOn=!soundOn;ls('pd_snd',soundOn?'1':'0');syncSnd();if(soundOn)sfx('turn')};syncSnd();
+let admTaps=0,admT=0;
+$('btnSnd').onclick=()=>{
+  soundOn=!soundOn;ls('pd_snd',soundOn?'1':'0');syncSnd();if(soundOn)sfx('turn');
+  const t=Date.now();admTaps=t-admT<1500?admTaps+1:1;admT=t;      // 10 нажатий подряд, пауза между ними до 1,5 с
+  if(admTaps>=10){admTaps=0;openAdmin()}
+};syncSnd();
+let admShown='';
+function openAdmin(){
+  if(!S){toast('Сначала войдите в комнату');return}
+  admShown='';renderAdmin();$('ovAdmin').classList.add('on');
+}
+function renderAdmin(){
+  const key=S&&S.admin?'on'+S.spyOn:'off';
+  if(key===admShown)return;admShown=key;
+  const b=$('admBody');
+  if(S&&S.admin){
+    b.innerHTML='<label class="sw"><span>Видеть кости соперников</span><input type="checkbox" id="admSpy"'+(S.spyOn?' checked':'')+'></label>'+
+      '<p style="margin-top:10px">Чужие кости показываются под именами игроков в фазе торгов. Видны только вам.</p>';
+    $('admSpy').onchange=e=>socket.emit('adminSpy',{on:e.target.checked});
+  }else{
+    b.innerHTML='<p>Введите код доступа.</p><input class="inp" id="admCode" type="password" autocomplete="off" placeholder="Код"><button class="btn" id="admGo" style="margin-top:12px">Войти</button><div class="err" id="admErr"></div>';
+    const go=()=>socket.emit('admin',{code:$('admCode').value},res=>{if(!(res&&res.ok))$('admErr').textContent=(res&&res.error)||'Ошибка'});
+    $('admGo').onclick=go;$('admCode').addEventListener('keydown',e=>{if(e.key==='Enter')go()});
+  }
+}
+$('admClose').onclick=()=>$('ovAdmin').classList.remove('on');
 $('btnRules').onclick=()=>$('ovRules').classList.add('on');
 $('btnRulesOk').onclick=()=>$('ovRules').classList.remove('on');
 let cupHidden=false;
@@ -430,6 +473,7 @@ function render(prev){
   if(s.phase==='over')renderOver();
   if(s.phase==='reveal')renderReveal();else{revealKey='';clearInterval(rvTimer)}
   renderPlayers();renderBoard();renderDice();
+  if($('ovAdmin').classList.contains('on'))renderAdmin();
   if(s.phase!=='lobby')renderCtl();else{$('ctl').classList.add('off');setHint('')}
 
   if(s.phase==='bidding'&&s.round!==lastRound){
@@ -446,10 +490,14 @@ function render(prev){
   lastPhase=s.phase;
 }
 
+function spyHTML(idx){
+  const e=S.spy&&S.spy.find(x=>x.idx===idx);
+  return e?'<div class="spy">'+e.dice.map(d=>die(d)).join('')+'</div>':'';
+}
 function renderPlayers(){
   $('players').innerHTML=S.players.map(p=>{
     let minis='';for(let i=0;i<p.n&&p.alive;i++)minis+='<b></b>';
-    return '<div class="pl'+(p.idx===S.turn?' turn':'')+(p.alive?'':' out')+(p.idx===S.youIdx?' me':'')+'"><div class="pn">'+(p.bot?'🤖 ':'🧑 ')+esc(p.name)+(p.idx===S.youIdx?' (вы)':'')+(p.connected?'':' 💤')+'</div><div class="pd">'+minis+'</div>'+(p.maputoUsed?'<span class="mp">М</span>':'')+'</div>';
+    return '<div class="pl'+(p.idx===S.turn?' turn':'')+(p.alive?'':' out')+(p.idx===S.youIdx?' me':'')+'"><div class="pn">'+(p.bot?'🤖 ':'🧑 ')+esc(p.name)+(p.idx===S.youIdx?' (вы)':'')+(p.connected?'':' 💤')+'</div><div class="pd">'+minis+'</div>'+spyHTML(p.idx)+(p.maputoUsed?'<span class="mp">М</span>':'')+'</div>';
   }).join('');
 }
 
@@ -472,6 +520,11 @@ function renderBoard(){
     if(s.turn===s.youIdx){t='Ваш ход';c+=' you'}
     else{t='Ход: '+cur.name+(cur.bot?' (думает…)':cur.connected?'…':' — не в сети, сыграет бот');if(!cur.connected&&!cur.bot)c+=' warn'}
     t+=' · костей на столе: '+s.total;
+    if(s.spy&&s.bid){                         // подсказка админа: сколько костей ставки реально на столе
+      const f=s.bid.face,jk=!s.maputo&&f!==1;let n=0;
+      s.dice.concat(...s.spy.map(x=>x.dice)).forEach(d=>{if(d===f||(jk&&d===1))n++});
+      t+=' · 👁 '+n+' из '+s.bid.qty;
+    }
   }else if(s.phase==='reveal')t='Вскрытие';
   else if(s.phase==='lobby')t='Ожидание игроков';
   else t='Игра окончена';

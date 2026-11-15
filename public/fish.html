@@ -216,7 +216,6 @@ button{cursor:pointer}
     <div class="roomtag" id="roomTag">Комната</div>
     <button class="iconbtn" id="btnTempo" title="Темп игры">🐢</button>
     <button class="iconbtn" id="btnSnd" title="Звук">🔊</button>
-    <button class="iconbtn" id="btnChat" title="Чат">💬</button>
     <button class="iconbtn" id="btnShare" title="Пригласить">🔗</button>
     <button class="iconbtn" id="btnLeave" title="Выйти">✕</button>
   </header>
@@ -294,7 +293,6 @@ button{cursor:pointer}
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/chat.js"></script>
 <script>
 (function(){
 'use strict';
@@ -355,7 +353,6 @@ const setUrl=code=>{try{history.replaceState(null,'',location.pathname+(code?'?r
 
 /* ---------- Сокет ---------- */
 const socket=io({reconnectionDelay:500,reconnectionDelayMax:3000});
-if(window.initChat)initChat({socket:socket,button:document.getElementById('btnChat'),otherName:'Соперник'});
 let S=null,seen=0,joining=false,wantCode=urlRoom()||store('gf_room');
 
 socket.on('connect',()=>{$('net').classList.remove('on');if(wantCode)doJoin(wantCode,true)});

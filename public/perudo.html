@@ -313,7 +313,7 @@ $('nameIn').addEventListener('input',()=>ls('pd_name',$('nameIn').value));
 
 /* ---------- Сокет ---------- */
 const socket=io('/perudo',{reconnectionDelay:500,reconnectionDelayMax:3000});
-initChat({socket:socket,button:document.getElementById('btnChat')});
+if(window.initChat)initChat({socket:socket,button:document.getElementById('btnChat')});
 let S=null,wantCode=urlRoom()||ss('pd_room'),joining=false;
 socket.on('connect',()=>{$('net').classList.remove('on');if(wantCode)doJoin(wantCode,true)});
 socket.on('disconnect',()=>$('net').classList.add('on'));

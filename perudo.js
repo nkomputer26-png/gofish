@@ -6,7 +6,9 @@
 */
 
 const crypto = require('crypto');
+const chat = require('./chatlib');
 
+const DEFAULT_ADMIN_CODE = '300450';
 const MAX_PLAYERS = 6;
 const DICE = 5;
 const ROOM_TTL = 15 * 60 * 1000;
@@ -216,7 +218,13 @@ function view(room, idx) {
     bid: room.bid,
     history: room.history.slice(-12),
     winner: room.winner,
-    reveal: rv ? Object.assign({}, rv, { endsIn: Math.max(0, room.revealEnds - Date.now()) }) : null
+    reveal: rv ? Object.assign({}, rv, { endsIn: Math.max(0, room.revealEnds - Date.now()) }) : null,
+    // Админ-режим: чужие кости видит только игрок, прошедший проверку кодом на сервере
+    admin: !!me.admin,
+    spyOn: !!me.spy,
+    spy: me.admin && me.spy && room.phase === 'bidding'
+      ? room.players.map((p, k) => ({ idx: k, dice: k !== idx && p.alive ? p.dice : [] })).filter(x => x.dice.length)
+      : null
   };
 }
 
@@ -336,6 +344,12 @@ function attach(io, { genCode }) {
   }
 
   nsp.on('connection', socket => {
+    chat.register(socket, (code, ev, m) => nsp.to(code).emit(ev, m), s => {
+      const room = rooms.get(s.data.room);
+      const p = room && room.players.find(x => x.cid === s.data.cid);
+      return p ? { room, name: p.name } : null;
+    });
+
     socket.on('create', (data, cb) => {
       cb = typeof cb === 'function' ? cb : () => {};
       const cid = sanitizeCid(data && data.clientId);
@@ -436,6 +450,30 @@ function attach(io, { genCode }) {
       if (room.players.filter(p => p.bot || p.connected).length < 2) return;
       startGame(room);
       change(room);
+    });
+
+    // Скрытое админ-меню. Код по умолчанию 300450; на Render его можно заменить переменной окружения ADMIN_CODE.
+    socket.on('admin', (data, cb) => {
+      cb = typeof cb === 'function' ? cb : () => {};
+      const { room, idx } = ctx(socket);
+      if (!room || idx < 0) return cb({ ok: false, error: 'Сначала войдите в комнату' });
+      const key = process.env.ADMIN_CODE || DEFAULT_ADMIN_CODE;   // переменная окружения важнее кода по умолчанию
+      socket.data.adminTries = (socket.data.adminTries || 0) + 1;
+      if (socket.data.adminTries > 5) return cb({ ok: false, error: 'Слишком много попыток, обновите страницу' });
+      const a = Buffer.from(String((data && data.code) || '')), b = Buffer.from(String(key));
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return cb({ ok: false, error: 'Неверный код' });
+      socket.data.adminTries = 0;
+      room.players[idx].admin = true;
+      room.players[idx].spy = true;
+      cb({ ok: true });
+      broadcast(room);
+    });
+
+    socket.on('adminSpy', data => {
+      const { room, idx } = ctx(socket);
+      if (!room || idx < 0 || !room.players[idx].admin) return;
+      room.players[idx].spy = !!(data && data.on);
+      broadcast(room);
     });
 
     socket.on('leave', () => detach(socket, true));

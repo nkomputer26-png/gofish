@@ -6,6 +6,7 @@
 */
 
 const crypto = require('crypto');
+const chat = require('./chatlib');
 
 const DEFAULT_ADMIN_CODE = '300450';
 const MAX_PLAYERS = 6;
@@ -343,6 +344,12 @@ function attach(io, { genCode }) {
   }
 
   nsp.on('connection', socket => {
+    chat.register(socket, (code, ev, m) => nsp.to(code).emit(ev, m), s => {
+      const room = rooms.get(s.data.room);
+      const p = room && room.players.find(x => x.cid === s.data.cid);
+      return p ? { room, name: p.name } : null;
+    });
+
     socket.on('create', (data, cb) => {
       cb = typeof cb === 'function' ? cb : () => {};
       const cid = sanitizeCid(data && data.clientId);

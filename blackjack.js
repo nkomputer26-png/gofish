@@ -7,13 +7,14 @@
 */
 
 const crypto = require('crypto');
+const chat = require('./chatlib');
 
 const START = 1000;
 const MIN_BET = 10;
 const MAX_BET = 1000;
 const MAX_SEATS = 5;
 const SPOTS = 3;           // сколько рук можно поставить в раунде
-const MAX_HANDS = 4;       // максимум рук у игрока с учётом сплитов
+const MAX_HANDS = 4;       // максимум рук на один бокс с учётом сплитов (до 3 сплитов)
 const DECKS = 6;
 const BET_MS = 30000;
 const INS_MS = 15000;
@@ -34,6 +35,8 @@ const isTen = c => c.r === '10' || c.r === 'J' || c.r === 'Q' || c.r === 'K';
 const cardVal = c => (c.r === 'A' ? 11 : isTen(c) ? 10 : parseInt(c.r, 10));
 
 // Все тузы сначала за 11, затем лишние переводятся в 1, пока перебор
+// Любой туз — 11, пока нет перебора; при переборе туз автоматически становится 1
+// (сначала считаем все тузы за 11, затем в цикле вычитаем по 10)
 function value(cards) {
   let t = 0, a = 0;
   for (const c of cards) { t += cardVal(c); if (c.r === 'A') a++; }
@@ -41,8 +44,8 @@ function value(cards) {
   return { total: t, soft: a > 0 };
 }
 
-const newHand = bet => ({
-  cards: [], bet, doubled: false, fromSplit: false, splitAces: false, acted: false,
+const newHand = (bet, box) => ({
+  box, cards: [], bet, doubled: false, fromSplit: false, splitAces: false, acted: false,
   done: false, bust: false, settled: false, result: null, net: 0
 });
 // Блэкджек — только 21 из двух карт и не после сплита
@@ -70,7 +73,7 @@ function actions(room, p, h) {
   A.stand = true;
   A.hit = !h.splitAces;
   if (two && !h.splitAces && p.balance >= h.bet) A.double = true;
-  if (two && !h.splitAces && p.hands.length < MAX_HANDS && p.balance >= h.bet) {
+  if (two && !h.splitAces && p.hands.filter(x => x.box === h.box).length < MAX_HANDS && p.balance >= h.bet) {
     const [a, b] = h.cards;
     if (a.r === b.r || (isTen(a) && isTen(b))) A.split = true;
   }
@@ -130,7 +133,7 @@ function closeBetting(room) {
     return;
   }
   room.dealer = { cards: [], reveal: false };
-  for (const p of active) { p.hands = p.spots.filter(b => b > 0).map(b => newHand(b)); p.lastSpots = p.spots.slice(); }
+  for (const p of active) { p.hands = p.spots.map((b, i) => (b > 0 ? newHand(b, i) : null)).filter(Boolean); p.lastSpots = p.spots.slice(); }
   for (let pass = 0; pass < 2; pass++) {      // по спецификации: игроки, дилер-открытая, игроки, дилер-закрытая
     for (const p of active) for (const h of p.hands) h.cards.push(draw(room));
     room.dealer.cards.push(draw(room));
@@ -250,7 +253,7 @@ function act(room, pi, action) {
     const c2 = h.cards.pop();
     p.balance -= h.bet;
     const aces = h.cards[0].r === 'A';
-    const nh = newHand(h.bet);
+    const nh = newHand(h.bet, h.box);
     nh.cards = [c2]; nh.fromSplit = true; h.fromSplit = true; nh.splitAces = aces; h.splitAces = aces;
     h.cards.push(draw(room)); nh.cards.push(draw(room));
     p.hands.splice(hi + 1, 0, nh);
@@ -525,6 +528,12 @@ function attach(io, { genCode }) {
   }
 
   nsp.on('connection', socket => {
+    chat.register(socket, (code, ev, m) => nsp.to(code).emit(ev, m), s => {
+      const room = rooms.get(s.data.room);
+      const p = room && room.players.find(x => x.cid === s.data.cid);
+      return p ? { room, name: p.name } : null;
+    });
+
     socket.on('create', (data, cb) => {
       cb = typeof cb === 'function' ? cb : () => {};
       const cid = sanitizeCid(data && data.clientId);

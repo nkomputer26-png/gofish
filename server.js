@@ -7,6 +7,7 @@ const express = require('express');
 const { Server } = require('socket.io');
 const perudo = require('./perudo');
 const blackjack = require('./blackjack');
+const bank = require('./bank');
 const chat = require('./chatlib');
 
 const PORT = process.env.PORT || 3000;
@@ -35,10 +36,10 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 // Проверка, какая версия сервера реально запущена на Render
-const VERSION = '2026-11-15-bj-chat-admin';
+const VERSION = '2026-11-15-bank';
 app.get('/api/version', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  res.json({ version: VERSION, games: ['fish', 'perudo', 'blackjack'], chat: true });
+  res.json({ version: VERSION, games: ['fish', 'perudo', 'blackjack', 'bank'], chat: true });
 });
 
 // По коду комнаты определяем, какая это игра (для ссылок вида /?room=1234)
@@ -47,6 +48,7 @@ app.get('/api/room/:code', (req, res) => {
   if (rooms.has(code)) return res.json({ game: 'fish' });
   if (perudo.rooms.has(code)) return res.json({ game: 'perudo' });
   if (blackjack.rooms.has(code)) return res.json({ game: 'blackjack' });
+  if (bank.rooms.has(code)) return res.json({ game: 'bank' });
   res.status(404).json({ error: 'not found' });
 });
 
@@ -57,7 +59,7 @@ const rooms = new Map();
 function genCode() {
   for (let i = 0; i < 300; i++) {
     const c = String(crypto.randomInt(0, 10000)).padStart(4, '0');
-    if (!rooms.has(c) && !perudo.rooms.has(c) && !blackjack.rooms.has(c)) return c;
+    if (!rooms.has(c) && !perudo.rooms.has(c) && !blackjack.rooms.has(c) && !bank.rooms.has(c)) return c;
   }
   return null;
 }
@@ -347,6 +349,7 @@ function detach(socket, { explicit = false } = {}) {
 
 perudo.attach(io, { genCode });
 blackjack.attach(io, { genCode });
+bank.attach(io, { genCode });
 
 io.on('connection', socket => {
   chat.register(socket, (code, ev, m) => io.to(code).emit(ev, m), s => {
